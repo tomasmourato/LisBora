@@ -9,7 +9,7 @@ As rotas são calculadas **no telemóvel**: não há servidor nem contas. O plan
 | Fase | Conteúdo | Estado |
 |---|---|---|
 | 0 | Ambiente e esqueleto do projeto | ✅ |
-| 1 | Mapa offline e rede ciclável da CML | 🚧 |
+| 1 | Mapa offline e rede ciclável da CML | ✅ |
 | 2 | Grafo e router (JVM) | — |
 | 3 | Planear A→B | — |
 | 4 | Descobrir (rotas automáticas) | — |
@@ -38,6 +38,6 @@ O código ainda não tem licença: todos os direitos estão reservados. Os dados
 
 - **OpenStreetMap** — © contribuidores do OpenStreetMap, [ODbL](https://opendatacommons.org/licenses/odbl/). As bases de dados derivadas (grafo de rotas, índice de pesquisa) são distribuídas sob a ODbL.
 - **Rede Ciclável de Lisboa** — © Câmara Municipal de Lisboa ([Lisboa Aberta](https://dados.cm-lisboa.pt/dataset/rede-ciclavel)), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Os dados são normalizados e associados ao grafo OSM pela LisBora.
-- **Mapa base** — [Protomaps](https://protomaps.com), com dados © contribuidores do OpenStreetMap.
+- **Mapa base** — [Protomaps](https://protomaps.com), com dados © contribuidores do OpenStreetMap. Fontes Noto Sans (SIL Open Font License) e ícones derivados de [tangrams/icons](https://github.com/tangrams/icons) (MIT); ver [app/src/main/assets/map/NOTICE.md](app/src/main/assets/map/NOTICE.md).
 
 A LisBora mostra o nível de stress e os perigos de cada rota, mas nenhuma rota é garantidamente segura. Circula sempre com atenção e cumpre o Código da Estrada.

@@ -19,3 +19,4 @@ captures/
 
 # Pipeline downloads and generated data (rebuilt by :pipeline)
 pipeline/work/
+node_modules/

@@ -1,0 +1,10 @@
+{
+  "source": "Protomaps daily build",
+  "sourceUrl": "https://build.protomaps.com/20261025.pmtiles",
+  "buildDate": "20261025",
+  "bbox": "-9.3,38.655,-9.05,38.83",
+  "maxZoom": 15,
+  "license": "ODbL (Produced Work)",
+  "attribution": "Protomaps © OpenStreetMap",
+  "extractedAt": "2026-10-25T17:55:36.303924400Z"
+}

@@ -28,5 +28,13 @@ ANDROID_HOME="C:/Users/mrttm/AppData/Local/Android/Sdk"
 - Compilar: `./gradlew :app:assembleDebug`
 - Emulador: `$ANDROID_HOME/emulator/emulator -avd LisBora_API37 -no-snapshot-save -gpu host`
 - Instalar e abrir: `$ANDROID_HOME/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk && $ANDROID_HOME/platform-tools/adb shell am start -n pt.lisbora/.MainActivity`
-- Testes de UI (com o emulador ligado): `./gradlew :app:connectedDebugAndroidTest`
-- Pipeline: `./gradlew :pipeline:run --args="help"`
+- Testes de UI (com o emulador ligado): `./gradlew :app:connectedDebugAndroidTest`. No fim, desinstalam a app; volta a instalá-la antes de a correres.
+- Pipeline: `./gradlew :pipeline:run --args="help"`. Os caminhos são relativos à raiz.
+- Localização simulada no emulador (o `geo fix` não funciona nesta imagem):
+  `adb shell appops set com.android.shell android:mock_location allow`, depois `adb shell cmd location providers add-test-provider gps` e `adb shell cmd location providers set-test-provider-location gps --location 38.7139,-9.1427`.
+
+## Pacote de dados embutido (`app/src/main/assets/datapack`)
+A app copia-o para `filesDir/datapack` no arranque, só os ficheiros cujo SHA-256 mudou, segundo o `manifest.json`. Cada comando do pipeline regenera o manifesto.
+- Rede ciclável da CML: `./gradlew :pipeline:run --args="fetch-cml --out app/src/main/assets/datapack"`
+- Mapa base (cerca de 18 MB, versionado no git: atualiza-o com parcimónia): `./gradlew :pipeline:run --args="basemap --out app/src/main/assets/datapack"`. Precisa do `pmtiles` CLI em `pipeline/work/tools/`.
+- Estilos, fontes e sprites (`app/src/main/assets/map`): `cd pipeline/tools/style && npm ci && npm run generate`.

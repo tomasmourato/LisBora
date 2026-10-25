@@ -15,7 +15,7 @@ Decisões tomadas contigo:
 - **Contas**: não há. Os dados ficam todos locais.
 
 ### Dados verificados (rede ciclável da CML)
-- Serviço ArcGIS: `https://services.arcgis.com/1dSrzEWVQn5kHHyK/arcgis/rest/services/Ciclovias/FeatureServer/0`. Licença **CC BY 4.0** (Município de Lisboa / Lisboa Aberta). Última edição a **22/10/2026**. Máximo de 2000 registos por pedido, por isso é preciso paginar. Pede-se com `outSR=4326`.
+- Serviço ArcGIS: `https://services.arcgis.com/1dSrzEWVQn5kHHyK/arcgis/rest/services/Ciclovias/FeatureServer/0`. Licença **CC BY 4.0** (Município de Lisboa / Lisboa Aberta). Última edição a **23/10/2026**. Máximo de 2000 registos por pedido, por isso é preciso paginar. Pede-se com `outSR=4326`.
 - Tem 1087 segmentos e cerca de 298 km, todos com `SITUACAO = Executado`. Os campos úteis são `TIPOLOGIA`, `NIVEL_SEGREGACAO`, `HIERARQUIA`, `DESIGNACAO`, `FREGUESIA`, `ANO` e `GlobalID`.
 
 | Classe LisBora | TIPOLOGIA da CML (segregação) | km |

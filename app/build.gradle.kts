@@ -38,6 +38,11 @@ android {
     buildFeatures {
         compose = true
     }
+
+    androidResources {
+        // PMTiles tiles are already compressed; storing them as-is keeps install-time copying cheap.
+        noCompress += "pmtiles"
+    }
 }
 
 dependencies {
@@ -52,6 +57,9 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
+    implementation(libs.maplibre.android)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

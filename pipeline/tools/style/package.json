@@ -1,0 +1,12 @@
+{
+  "name": "lisbora-map-style",
+  "private": true,
+  "description": "Generates LisBora's offline MapLibre styles (Protomaps basemap) and downloads their fonts and sprites.",
+  "type": "module",
+  "scripts": {
+    "generate": "node generate.mjs"
+  },
+  "dependencies": {
+    "@protomaps/basemaps": "5.7.2"
+  }
+}

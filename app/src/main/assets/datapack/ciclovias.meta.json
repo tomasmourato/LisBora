@@ -1,0 +1,24 @@
+{
+  "source": "Câmara Municipal de Lisboa — Rede Ciclável",
+  "sourceUrl": "https://dados.cm-lisboa.pt/dataset/rede-ciclavel",
+  "serviceUrl": "https://services.arcgis.com/1dSrzEWVQn5kHHyK/arcgis/rest/services/Ciclovias/FeatureServer/0",
+  "license": "CC BY 4.0",
+  "attribution": "Rede Ciclável © Câmara Municipal de Lisboa (CC BY 4.0), dados normalizados pela LisBora",
+  "sourceLastEdit": "2026-10-23T09:14:09.040Z",
+  "fetchedAt": "2026-10-25T17:53:04.771062800Z",
+  "featureCount": 1086,
+  "lengthKmByClass": {
+    "segregated": 118.9,
+    "lane": 8.4,
+    "shared30": 87.2,
+    "shared_ped": 23.5,
+    "trail": 58.8
+  },
+  "lengthKmTotal": 296.8,
+  "rejected": {
+    "NOT_BUILT": 0,
+    "NO_GEOMETRY": 1,
+    "UNKNOWN_CLASS": 0
+  },
+  "unknownTypologies": []
+}

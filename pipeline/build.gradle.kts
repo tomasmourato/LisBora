@@ -21,8 +21,16 @@ application {
     mainClass.set("pt.lisbora.pipeline.MainKt")
 }
 
+// Resolve CLI paths (--out, tools) against the repository root, not the module directory.
+tasks.named<JavaExec>("run") {
+    workingDir = rootDir
+    // Portuguese output: force UTF-8 regardless of the Windows console code page.
+    jvmArgs("-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8")
+}
+
 dependencies {
     implementation(project(":core:routing"))
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

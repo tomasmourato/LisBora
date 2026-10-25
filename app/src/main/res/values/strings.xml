@@ -4,8 +4,30 @@
 
     <string name="home_search_hint">Para onde vais?</string>
     <string name="home_discover">Descobrir</string>
-    <string name="home_map_placeholder_title">Mapa de Lisboa</string>
-    <string name="home_map_placeholder_body">O mapa com a rede ciclável chega na Fase 1.</string>
     <string name="home_search_coming_soon">A pesquisa de destinos chega na Fase 3.</string>
     <string name="home_discover_coming_soon">As rotas automáticas chegam na Fase 4.</string>
+
+    <string name="map_legend_toggle">Legenda da rede ciclável</string>
+    <string name="map_legend_title">Rede ciclável</string>
+    <string name="map_legend_show">Mostrar a rede ciclável no mapa</string>
+    <string name="map_legend_source">Fonte: Câmara Municipal de Lisboa (CC BY 4.0)</string>
+    <string name="map_legend_updated">dados de %1$s</string>
+    <string name="map_my_location">A minha localização</string>
+    <string name="map_close">Fechar</string>
+    <string name="map_no_basemap">Mapa base em falta: só a rede ciclável está visível.</string>
+
+    <string name="cycle_class_segregated">Ciclovia segregada</string>
+    <string name="cycle_class_lane">Faixa ciclável</string>
+    <string name="cycle_class_shared30">Rua 30+Bici / coexistência</string>
+    <string name="cycle_class_shared_ped">Percurso ciclopedonal</string>
+    <string name="cycle_class_trail">Trilho</string>
+
+    <string name="segment_parish">Freguesia: %1$s</string>
+    <string name="segment_year">desde %1$s</string>
+    <string name="segment_contraflow">Contrassentido: podes circular no sentido contrário ao do trânsito.</string>
+
+    <string name="message_location_denied">Sem acesso à localização. Podes ativá-lo nas definições da app.</string>
+    <string name="message_outside_area">Estás fora da área coberta pela LisBora.</string>
+    <string name="message_location_unavailable">A localização ainda não está disponível. Tenta de novo daqui a pouco.</string>
+    <string name="message_map_failed">Não foi possível carregar o mapa.</string>
 </resources>

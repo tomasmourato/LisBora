@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "files": [
+    {
+      "path": "basemap.meta.json",
+      "size": 319,
+      "sha256": "9a809d97a0bb4c2b87e268326591d88ac6b8d96abea3efe4e1c3c9944faa2c42"
+    },
+    {
+      "path": "basemap.pmtiles",
+      "size": 18515312,
+      "sha256": "c15c879c6159bc1c3d49ce4a9f244876004d76769f9c06c8df61fe07a78813e6"
+    },
+    {
+      "path": "ciclovias.geojson",
+      "size": 1328321,
+      "sha256": "c98c04441907cc212de164abf890732013f884f74d14bd54001f243db20086f9"
+    },
+    {
+      "path": "ciclovias.meta.json",
+      "size": 774,
+      "sha256": "3a9e6f4aefcdf82eb34913113b6a98b40579ce9ce34020b989445e0e876e93a9"
+    }
+  ]
+}
