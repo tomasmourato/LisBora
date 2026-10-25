@@ -30,6 +30,7 @@ ANDROID_HOME="C:/Users/mrttm/AppData/Local/Android/Sdk"
 - Instalar e abrir: `$ANDROID_HOME/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk && $ANDROID_HOME/platform-tools/adb shell am start -n pt.lisbora/.MainActivity`
 - Testes de UI (com o emulador ligado): `./gradlew :app:connectedDebugAndroidTest`. No fim, desinstalam a app; volta a instalá-la antes de a correres.
 - Pipeline: `./gradlew :pipeline:run --args="help"`. Os caminhos são relativos à raiz.
+- Grafo de rotas: `./gradlew :pipeline:run --args="build"` (usa 8 GB; ~1,5 min com caches) e `./gradlew :pipeline:goldenRoutes`. Caches em `pipeline/work/{osm,gh,dem}`; relatório em `pipeline/work/qa/report.md`; o grafo só vai para `--out` (por omissão `pipeline/work/datapack`) se o QA passar, mas fica sempre em `pipeline/work/graph-candidate.lbg`. Para ver uma rota troço a troço: `--args="golden-routes --detalhe sim --graph pipeline/work/graph-candidate.lbg"`.
 - Localização simulada no emulador (o `geo fix` não funciona nesta imagem):
   `adb shell appops set com.android.shell android:mock_location allow`, depois `adb shell cmd location providers add-test-provider gps` e `adb shell cmd location providers set-test-provider-location gps --location 38.7139,-9.1427`.
 

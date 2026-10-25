@@ -1,0 +1,42 @@
+{
+  "forbiddenEdgeNames": ["Ponte 25 de Abril"],
+  "routes": [
+    {
+      "name": "Cais do Sodré → Belém pela frente ribeirinha",
+      "from": [38.7056, -9.1452],
+      "to": [38.6935, -9.2056],
+      "expect": { "minInfraShare": 0.8, "minDurationMin": 15, "maxDurationMin": 35 }
+    },
+    {
+      "name": "Marquês de Pombal → Saldanha",
+      "from": [38.7266, -9.1492],
+      "to": [38.7340, -9.1448],
+      "expect": { "minSegregatedShare": 0.5, "maxDurationMin": 10 }
+    },
+    {
+      "name": "Restauradores → São Pedro de Alcântara com inclinação máxima de 8%",
+      "from": [38.7155, -9.1416],
+      "to": [38.7151, -9.1443],
+      "preferences": { "maxGradePercent": 8 },
+      "expect": { "avoidNames": ["Calçada da Glória"] }
+    },
+    {
+      "name": "Praça da Figueira → Largo da Graça",
+      "from": [38.7139, -9.1382],
+      "to": [38.7168, -9.1312],
+      "expect": { "minDurationMin": 4, "maxDurationMin": 25 }
+    },
+    {
+      "name": "Alcântara → Cacilhas de barco",
+      "from": [38.7040, -9.1770],
+      "to": [38.6878, -9.1468],
+      "expect": { "usesFerry": true, "avoidNames": ["Ponte 25 de Abril"] }
+    },
+    {
+      "name": "Gare do Oriente → Oceanário",
+      "from": [38.7678, -9.0995],
+      "to": [38.7633, -9.0937],
+      "expect": { "maxDurationMin": 12 }
+    }
+  ]
+}

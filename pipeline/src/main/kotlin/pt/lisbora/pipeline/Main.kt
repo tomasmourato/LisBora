@@ -3,7 +3,14 @@ package pt.lisbora.pipeline
 import pt.lisbora.pipeline.basemap.BasemapCommand
 import pt.lisbora.pipeline.cml.CmlClient
 import pt.lisbora.pipeline.cml.FetchCmlCommand
+import pt.lisbora.pipeline.dem.TerrariumDem
+import pt.lisbora.pipeline.graph.BuildGraphCommand
+import pt.lisbora.pipeline.graph.BuildOptions
 import pt.lisbora.pipeline.http.JdkHttpGet
+import pt.lisbora.pipeline.osm.OsmExtract
+import pt.lisbora.pipeline.qa.GoldenConfig
+import pt.lisbora.pipeline.qa.GoldenRoutesCommand
+import pt.lisbora.routing.graph.GraphFormat
 import java.io.PrintStream
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -12,6 +19,7 @@ import kotlin.system.exitProcess
 
 internal const val DEFAULT_PACK_DIR = "pipeline/work/datapack"
 internal const val BUNDLED_PACK_DIR = "app/src/main/assets/datapack"
+internal const val WORK_DIR = "pipeline/work"
 
 internal val USAGE = """
     Utilização: gradlew :pipeline:run --args="<comando> [opções]"
@@ -22,13 +30,22 @@ internal val USAGE = """
       fetch-cml [--out DIR]   Descarrega e normaliza a Rede Ciclável da CML.
       basemap [--out DIR] [--date AAAAMMDD] [--maxzoom N] [--pmtiles CAMINHO]
                               Extrai o mapa base da região a partir do build diário Protomaps.
+      build [--out DIR] [--osm FICHEIRO] [--refresh-osm sim] [--cml FICHEIRO] [--dem-zoom N]
+                              Constrói o grafo de rotas (graph.lbg) a partir do OSM, da rede da CML
+                              e da elevação, com relatório QA em $WORK_DIR/qa. Só escreve se o QA passar.
+      golden-routes [--graph FICHEIRO] [--detalhe sim]
+                              Verifica as rotas de referência (${GoldenConfig.DEFAULT_FILE}).
+                              O build guarda sempre o grafo candidato em $WORK_DIR/${BuildGraphCommand.CANDIDATE_FILE}.
 
     Opções:
       --out DIR    Pasta do pacote de dados (por omissão: $DEFAULT_PACK_DIR).
                    Para atualizar o pacote embutido na app: --out $BUNDLED_PACK_DIR
+      --osm        Extrato OSM (por omissão: ${OsmExtract.DEFAULT_FILE}; descarregado se faltar).
+      --cml        Rede da CML usada pelo mapa (por omissão: $BUNDLED_PACK_DIR/${FetchCmlCommand.GEOJSON_FILE}).
+      --dem-zoom   Nível dos mosaicos de elevação Mapterhorn (por omissão: ${TerrariumDem.DEFAULT_ZOOM}).
 
     Previstos:
-      build        Constrói o grafo, os POIs e o índice de pesquisa (Fase 2).
+      POIs e índice de pesquisa (Fases 3 e 4).
 """.trimIndent()
 
 fun main(args: Array<String>) {
@@ -54,6 +71,22 @@ internal fun run(args: List<String>, out: PrintStream): Int {
             packDir = packDir,
             buildDate = options["date"],
             maxZoom = options["maxzoom"]?.toIntOrNull() ?: BasemapCommand.DEFAULT_MAX_ZOOM,
+        )
+        "build" -> BuildGraphCommand(JdkHttpGet(), out).run(
+            BuildOptions(
+                packDir = packDir,
+                osmFile = Path(options["osm"] ?: OsmExtract.DEFAULT_FILE),
+                refreshOsm = options["refresh-osm"] == "sim",
+                cmlFile = Path(options["cml"] ?: "$BUNDLED_PACK_DIR/${FetchCmlCommand.GEOJSON_FILE}"),
+                demZoom = options["dem-zoom"]?.toIntOrNull() ?: TerrariumDem.DEFAULT_ZOOM,
+                workDir = Path(WORK_DIR),
+                goldenFile = Path(GoldenConfig.DEFAULT_FILE),
+            ),
+        )
+        "golden-routes" -> GoldenRoutesCommand(out).run(
+            graphFile = Path(options["graph"] ?: "$DEFAULT_PACK_DIR/${GraphFormat.FILE_NAME}"),
+            configFile = Path(GoldenConfig.DEFAULT_FILE),
+            detailed = options["detalhe"] == "sim",
         )
         else -> {
             out.println("Comando desconhecido: $command")

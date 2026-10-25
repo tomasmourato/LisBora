@@ -69,7 +69,7 @@ Versões: na implementação vou buscar a última estável nas páginas oficiais
   - `InstructionBuilder` em pt-PT
 
   É partilhado pela app e pelo pipeline.
-- `:pipeline` — aplicação CLI em Kotlin/JVM que depende do `graphhopper-core` 11.1 e do JTS. Configuração em `pipeline/config/`: `region.geojson`, `overrides.geojson` (correções manuais) e `golden-routes.yaml`.
+- `:pipeline` — aplicação CLI em Kotlin/JVM que depende do `graphhopper-core` 11.1 e do JTS. Configuração em `pipeline/config/`: `golden-routes.json` (rotas de referência). Previstos: `region.geojson` (hoje a região é o retângulo `ServiceArea`) e `overrides.geojson` (correções manuais).
 - `:app` — Android, com pacotes por funcionalidade:
   - `feature/map`, `feature/search`, `feature/planner`, `feature/discover`, `feature/navigation`, `feature/saved`, `feature/settings`, `feature/about`
   - `data/` com os repositórios
@@ -87,7 +87,7 @@ Ficheiros principais a criar (representativos):
 
 1. **Região**: `region.geojson` cobre o concelho de Lisboa, uma margem de cerca de 3 km (Algés, Oeiras ribeirinha, Amadora, Odivelas e Loures sul) e Cacilhas/Almada ribeirinha (ligação por ferry). A região é configurável.
 2. **OSM**: extrato de Portugal da Geofabrik, importado pelo GraphHopper com o perfil bike e `turn_costs`. A exportação guarda só as arestas dentro da região e o maior componente fortemente ligado.
-3. **Elevação**: avaliar o fornecedor `pmtiles` do GraphHopper (mapterhorn, 2026) contra `srtm`/`cgiar`, com suavização. Validar em subidas conhecidas: Calçada da Glória, Av. da Liberdade, Av. Almirante Reis e Rua da Senhora do Monte. Pontes e túneis são interpolados.
+3. **Elevação**: o GraphHopper 11.1 não tem o fornecedor `pmtiles`, por isso a elevação é calculada na exportação, só para a região, a partir dos mosaicos Terrarium do **Mapterhorn** (z14, ~3,7 m por píxel). Em Portugal continental vêm do modelo digital do **terreno** LiDAR da DGT (0,5 m, CC BY 4.0), por isso as ruas são medidas no chão e não nos telhados (o SRTM e o Copernicus são modelos de superfície). Cada nó usa a mediana de 9 amostras; cada aresta é amostrada a cada 8 m, limpa com uma mediana móvel de 48 m (remove escavações e rampas de garagem à beira da rua) e suavizada com uma média de 24 m. Pontes, túneis e barcos são interpolados a partir das ruas à volta. O relatório QA lista as arestas pedaláveis acima de 25%.
 4. **Conflação CML** (dentro do `ExportGraph`, sem plugins no GraphHopper):
    - Amostrar as linhas da CML a cada ~5 m.
    - Atribuir cada amostra **apenas à aresta mais próxima** dentro de ~12 m e com rumo compatível (menos de 30°). Dar prioridade a vias OSM próprias para bicicleta. Isto evita marcar a estrada paralela a uma pista separada.
@@ -205,6 +205,7 @@ Cada fase termina com build, testes, instalação e execução no emulador e uma
      - Marquês → Saldanha usa a pista da Duque de Ávila / Fontes Pereira de Melo
      - nunca usa a Ponte 25 de Abril nem escadas
      - Baixa → Graça com inclinação máxima de 8% evita a Calçada da Glória
+   - **Feito (25/10/2026).** `pipeline build` importa Portugal com o GraphHopper (~1 min, guardado em cache), recorta a região, mantém o maior componente fortemente ligado e escreve `graph.lbg` (8 MB: 133 mil nós, 181 mil arestas, 3,4 mil restrições de viragem) só se o QA passar. A conflação associa 94,5% dos 297 km da CML (mínimo exigido: 85%). As rotas de referência estão em `pipeline/config/golden-routes.json`; a verificação da Calçada da Glória faz-se em Restauradores → São Pedro de Alcântara (a Glória não fica entre a Baixa e a Graça), e Praça da Figueira → Largo da Graça verifica a duração. O grafo ainda não vai na app: entra no pacote embutido na Fase 3.
 3. **Planear A→B**
    - Pacote de dados embutido e `RoutingRepository` (`Dispatchers.Default`).
    - Pesquisa offline e pressão longa no mapa.
@@ -245,7 +246,7 @@ Para o futuro, opcional:
 
 - **OSM (ODbL)**: "© OpenStreetMap contributors" no mapa. O grafo e o índice de pesquisa distribuídos são bases de dados derivadas ODbL, e isso tem de ficar indicado.
 - **Rede Ciclável © Câmara Municipal de Lisboa**, CC BY 4.0, com a indicação de que os dados foram modificados (normalizados e conflacionados). **Não se importam dados da CML para o OSM** sem autorização explícita.
-- **Protomaps** (dados OSM) e fontes OFL. **Elevação**: atribuição conforme a fonte (por exemplo, Copernicus), a confirmar na Fase 2.
+- **Protomaps** (dados OSM) e fontes OFL. **Elevação**: Mapterhorn, com dados da Direção-Geral do Território (LiDAR, CC BY 4.0) e Copernicus GLO-30 (© DLR e.V. 2010-2014 e © Airbus Defence and Space GmbH 2014-2018, fornecido no âmbito do COPERNICUS pela União Europeia e a ESA). Fica registada em `graph.meta.json`.
 - MapLibre (BSD-2) e restantes bibliotecas no ecrã de licenças. O GraphHopper (Apache 2.0) só corre no pipeline.
 - **Sem segredos**: a app não usa chaves de API. Qualquer configuração do CI fica em GitHub Secrets.
 
