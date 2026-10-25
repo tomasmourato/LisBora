@@ -1,0 +1,21 @@
+# Gradle / Kotlin
+.gradle/
+.kotlin/
+build/
+
+# Local machine config (SDK path)
+local.properties
+
+# IDE
+.idea/
+*.iml
+captures/
+.cxx/
+.externalNativeBuild/
+
+# Build outputs
+*.apk
+*.aab
+
+# Pipeline downloads and generated data (rebuilt by :pipeline)
+pipeline/work/
