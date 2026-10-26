@@ -186,16 +186,18 @@ class NavigationSessionTest {
         val trip = GiraTrip(pickUp, pickUp, walkToPickUpM = 300.0, walkFromDropOffM = null)
         vm.start(request(longRide, rejoin = true, trip = trip))
 
-        // Walking to the station: no clock yet, and no new route although off the planned one.
+        // Walking to the station: no clock yet, how far it is now, and no new route although off the planned one.
         fix(at(0.0, 300.0))
         fix(at(0.0, 250.0), afterS = 10.0)
         var g = vm.uiState.value.gira!!
         assertFalse(g.started)
+        assertEquals(230.0, g.toPickUpM!!, 1.0)
         assertTrue(routing.requests.isEmpty())
 
         // At the station the trip starts; 34 minutes later, 1 km on, nothing yet.
         fix(at(0.0, 30.0), afterS = 60.0)
         assertTrue(vm.uiState.value.gira!!.started)
+        assertNull(vm.uiState.value.gira!!.toPickUpM)
         fix(RouteAnalysis.pointAt(longRide, 1000.0), afterS = 34 * 60.0)
         assertNull(vm.uiState.value.gira!!.warning)
 

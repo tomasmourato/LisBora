@@ -1,6 +1,9 @@
 package pt.lisbora.feature.home
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
@@ -8,6 +11,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -17,6 +22,7 @@ import org.junit.runner.RunWith
 import pt.lisbora.data.datapack.CycleNetworkMeta
 import pt.lisbora.data.map.MapData
 import pt.lisbora.feature.map.CycleSegment
+import pt.lisbora.feature.navigation.NavigationUiState
 import pt.lisbora.feature.planner.PlannerActionsAdapter
 import pt.lisbora.feature.planner.PlannerUiState
 import pt.lisbora.routing.model.CycleInfraClass
@@ -128,5 +134,35 @@ class HomeScreenTest {
             Screen(state = HomeUiState(map = readyMap, pendingMessage = HomeMessage.OutsideServiceArea))
         }
         composeRule.onNodeWithText("Estás fora da área coberta pela LisBora.").assertIsDisplayed()
+    }
+
+    @Test
+    fun sidewaysWhileRidingTheNavigationTakesALeftColumnAndTheMapFollowsTheRiderOnTheRight() {
+        var insets: MapInsets? = null
+        composeRule.setContent {
+            // Wider than tall, like a phone on its side in a GIRA bike's holder (and within the test device's width).
+            Box(Modifier.size(width = 400.dp, height = 320.dp)) {
+                LisboraTheme {
+                    HomeScreen(
+                        uiState = HomeUiState(map = readyMap),
+                        darkTheme = false,
+                        onDiscoverClick = {},
+                        onMessageShown = {},
+                        onLegendToggle = {},
+                        onCycleNetworkVisibleChange = {},
+                        onSegmentDismiss = {},
+                        onMyLocationClick = {},
+                        navigation = NavigationUiState(active = true),
+                    ) { insets = it }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("À espera do GPS…").assertIsDisplayed()
+        composeRule.onNodeWithText("Terminar").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Desligar as indicações por voz").assertIsDisplayed()
+        composeRule.onNodeWithText("Para onde vais?").assertDoesNotExist()
+        // The rider is followed right of the panel (240 dp wide on so narrow a screen, 16 dp from the edge).
+        assertEquals(256f, insets!!.follow.calculateLeftPadding(LayoutDirection.Ltr).value, 0.5f)
     }
 }

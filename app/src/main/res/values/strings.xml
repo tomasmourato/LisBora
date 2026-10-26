@@ -328,6 +328,7 @@
     <string name="nav_ahead_busy">Trânsito intenso daqui a %1$s</string>
     <string name="nav_ahead_ferry">Barco daqui a %1$s</string>
     <string name="nav_gira_walk_to">Vai até à %1$s (a %2$s) e levanta uma bicicleta</string>
+    <string name="nav_gira_pick_up">Levanta uma bicicleta na %1$s</string>
     <string name="nav_gira_timer">GIRA: %1$d min desta viagem</string>
     <string name="nav_gira_timer_pending">GIRA: a contagem começa na estação</string>
     <plurals name="nav_gira_left">

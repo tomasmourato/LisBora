@@ -214,7 +214,8 @@ class NavigationSession @Inject constructor(
         } else {
             null
         }
-        return g.copy(startedAtMs = started, elapsedS = elapsed, warning = warning, suggestion = suggestion)
+        val toPickUp = if (started == null) fix.point.distanceTo(g.trip.pickUp.point) else null
+        return g.copy(startedAtMs = started, elapsedS = elapsed, warning = warning, suggestion = suggestion, toPickUpM = toPickUp)
     }
 
     private fun refreshStations() {

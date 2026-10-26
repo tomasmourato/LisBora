@@ -1,12 +1,18 @@
 package pt.lisbora.feature.navigation
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -113,6 +119,40 @@ class NavigationScreensTest {
         composeRule.onNodeWithText("Ir até lá").performClick()
         composeRule.onNodeWithText("Já troquei").performClick()
         assertEquals(listOf("go", "swapped"), actions.calls)
+    }
+
+    @Test
+    fun walkingToTheGiraStationSaysHowFarItIsNowAndThenToTakeABike() {
+        val pickUp = GiraStation(101, "101 - Rossio", start)
+        val walking = NavigationUiState(
+            active = true,
+            route = route,
+            gira = GiraNavigation(trip = GiraTrip(pickUp, pickUp, walkToPickUpM = 400.0, walkFromDropOffM = null), toPickUpM = 120.0),
+        )
+        var state by mutableStateOf(walking)
+        composeRule.setContent { LisboraTheme { NavigationTop(state, Recorder()) } }
+        composeRule.onNodeWithText("Vai até à estação GIRA 101 (a 120 m) e levanta uma bicicleta").assertIsDisplayed()
+
+        state = walking.copy(gira = walking.gira!!.copy(toPickUpM = 8.0))
+        composeRule.onNodeWithText("Levanta uma bicicleta na estação GIRA 101").assertIsDisplayed()
+    }
+
+    @Test
+    fun sidewaysThePanelHasTheNextTurnTheTimeLeftAndTerminar() {
+        val actions = Recorder()
+        val state = NavigationUiState(
+            active = true,
+            waitingForGps = false,
+            route = route,
+            next = Instruction(180.0, start, Maneuver.RIGHT, "Rua do Ouro", CyclewayChange.NONE),
+            distanceToNextM = 93.0,
+        )
+        composeRule.setContent { LisboraTheme { NavigationSidePanel(state, actions, Modifier.size(width = 320.dp, height = 360.dp)) } }
+        composeRule.onNodeWithText("90 m").assertIsDisplayed()
+        composeRule.onNodeWithText("Rua do Ouro").assertIsDisplayed()
+        composeRule.onNodeWithText("2 min").assertIsDisplayed()
+        composeRule.onNodeWithText("Terminar").performClick()
+        assertEquals(listOf("stop"), actions.calls)
     }
 
     @Test

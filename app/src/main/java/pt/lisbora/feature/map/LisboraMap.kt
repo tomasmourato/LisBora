@@ -49,6 +49,7 @@ import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.geo.ServiceArea
 import pt.lisbora.routing.model.CycleInfraClass
 import kotlin.coroutines.resume
+import kotlin.math.roundToInt
 
 enum class RecenterResult { CENTERED, OUTSIDE_SERVICE_AREA, UNAVAILABLE }
 
@@ -56,6 +57,9 @@ private const val CAMERA_ANIMATION_MS = 700
 private const val DIMMED_NETWORK_OPACITY = 0.35f
 private const val CASING_OPACITY = 0.9f
 private const val PADDING_SETTLE_FRAMES = 3
+
+/** While riding, the rider sits at about three quarters of the free height (the centre of its lower 55 %). */
+private const val FOLLOW_LOOK_AHEAD = 0.45
 
 /**
  * The MapLibre map: offline basemap, the CML cycle network and the planned routes. Stateless towards
@@ -67,8 +71,8 @@ private const val PADDING_SETTLE_FRAMES = 3
  * In [pickMode] a tap reports a point ([onPointPicked]) instead of selecting a segment.
  * [dimCycleNetwork] fades the network while a route is shown, so the route stands out.
  * [poiLayers] are the point-of-interest layers switched on in the legend.
- * While [followUser] (navigation) the camera follows the rider, turned to their heading; a gesture stops it
- * and a new [followRequest] starts it again.
+ * While [followUser] (navigation) the camera follows the rider, turned to their heading and tilted, with the rider
+ * low in the area [followPadding] leaves free; a gesture stops it and a new [followRequest] starts it again.
  */
 @Composable
 fun LisboraMap(
@@ -90,6 +94,7 @@ fun LisboraMap(
     poiLayers: Set<PoiLayer> = emptySet(),
     followUser: Boolean = false,
     followRequest: Int = 0,
+    followPadding: PaddingValues = cameraPadding,
     onLongPress: (GeoPoint) -> Unit = {},
     onPointPicked: (GeoPoint) -> Unit = {},
     onRouteClick: (Int) -> Unit = {},
@@ -262,29 +267,43 @@ fun LisboraMap(
         }
     }
 
-    LaunchedEffect(style, locationEnabled, followUser, followRequest) {
+    // Applied again when the panels around the map change size, e.g. when the phone is turned.
+    val followPx = with(density) {
+        listOf(
+            followPadding.calculateStartPadding(LayoutDirection.Ltr).roundToPx(),
+            followPadding.calculateTopPadding().roundToPx(),
+            followPadding.calculateEndPadding(LayoutDirection.Ltr).roundToPx(),
+            followPadding.calculateBottomPadding().roundToPx(),
+        )
+    }
+    LaunchedEffect(style, locationEnabled, followUser, followRequest, followPx) {
         val m = map ?: return@LaunchedEffect
         if (style == null || !locationEnabled) return@LaunchedEffect
         val component = m.locationComponent
         if (!component.isLocationComponentActivated) return@LaunchedEffect
         if (followUser) {
-            val p = currentCameraPadding
-            with(density) {
-                m.moveCamera(
-                    CameraUpdateFactory.paddingTo(
-                        p.calculateStartPadding(LayoutDirection.Ltr).roundToPx().toDouble(),
-                        p.calculateTopPadding().roundToPx().toDouble(),
-                        p.calculateEndPadding(LayoutDirection.Ltr).roundToPx().toDouble(),
-                        p.calculateBottomPadding().roundToPx().toDouble(),
-                    ),
-                )
+            // The map's height is known once it is laid out (after a rotation, a few frames from now).
+            repeat(PADDING_SETTLE_FRAMES) { if (mapView.height == 0) withFrameNanos { } }
+            val (start, top, end, bottom) = followPx
+            // The rider sits low (the focal point is the centre of the padded area), with the camera tilted:
+            // most of what is free shows the road ahead, not the road already ridden.
+            val lookAhead = ((mapView.height - top - bottom).coerceAtLeast(0) * FOLLOW_LOOK_AHEAD).roundToInt()
+            m.moveCamera(CameraUpdateFactory.paddingTo(start.toDouble(), (top + lookAhead).toDouble(), end.toDouble(), bottom.toDouble()))
+            // The transition below only zooms and tilts when there is a fix; without one yet (just after a
+            // rotation, the map is new), the view is set now and the camera follows from the first fix.
+            if (component.lastKnownLocation == null) {
+                m.moveCamera(CameraUpdateFactory.zoomTo(MapDefaults.NAVIGATION_ZOOM))
+                m.moveCamera(CameraUpdateFactory.tiltTo(MapDefaults.NAVIGATION_TILT))
             }
             component.renderMode = RenderMode.GPS
-            component.setCameraMode(CameraMode.TRACKING_GPS, CAMERA_ANIMATION_MS.toLong(), MapDefaults.NAVIGATION_ZOOM, null, null, null)
+            component.setCameraMode(
+                CameraMode.TRACKING_GPS, CAMERA_ANIMATION_MS.toLong(), MapDefaults.NAVIGATION_ZOOM, null, MapDefaults.NAVIGATION_TILT, null,
+            )
         } else {
             component.cameraMode = CameraMode.NONE
             component.renderMode = RenderMode.COMPASS
             m.moveCamera(CameraUpdateFactory.paddingTo(0.0, 0.0, 0.0, 0.0))
+            m.moveCamera(CameraUpdateFactory.tiltTo(0.0))
         }
     }
 

@@ -19,16 +19,23 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
@@ -55,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -80,7 +88,9 @@ import pt.lisbora.feature.navigation.KeepScreenOn
 import pt.lisbora.feature.navigation.NavigationActions
 import pt.lisbora.feature.navigation.NavigationActionsAdapter
 import pt.lisbora.feature.navigation.NavigationBottom
+import pt.lisbora.feature.navigation.NavigationButtons
 import pt.lisbora.feature.navigation.NavigationMessage
+import pt.lisbora.feature.navigation.NavigationSidePanel
 import pt.lisbora.feature.navigation.NavigationTop
 import pt.lisbora.feature.navigation.NavigationUiState
 import pt.lisbora.feature.navigation.NavigationViewModel
@@ -103,8 +113,11 @@ import pt.lisbora.feature.planner.plannerOverlay
 import pt.lisbora.feature.planner.samePlace
 import pt.lisbora.ui.theme.LisboraTheme
 
-/** Paddings handed to the map: [controls] for MapLibre's compass and attribution, [camera] for framing routes. */
-data class MapInsets(val controls: PaddingValues, val camera: PaddingValues)
+/**
+ * Paddings handed to the map: [controls] for MapLibre's compass and attribution, [camera] for framing routes,
+ * [follow] for the area the camera follows the rider in.
+ */
+data class MapInsets(val controls: PaddingValues, val camera: PaddingValues, val follow: PaddingValues = camera)
 
 @Composable
 fun HomeRoute(
@@ -272,6 +285,7 @@ fun HomeRoute(
                 poiLayers = uiState.poiLayers,
                 followUser = navigation.active,
                 followRequest = navigation.followRequest,
+                followPadding = insets.follow,
                 onLongPress = plannerActions::onMapLongPress,
                 onPointPicked = plannerActions::onMapPointPicked,
                 onRouteClick = plannerActions::onRouteSelect,
@@ -283,6 +297,12 @@ fun HomeRoute(
 }
 
 private const val GPX_MIME = "application/gpx+xml"
+
+/** Room the camera leaves for the instruction card while riding with the phone upright, below the status bar. */
+private val NAVIGATION_TOP_ROOM = 150.dp
+
+/** Room for "Recentrar" and the sheet with the time left, above the navigation bar. */
+private val NAVIGATION_BOTTOM_ROOM = 140.dp
 
 /** "lisbora-20261026-1530.gpx" */
 private fun gpxFileName(): String =
@@ -307,7 +327,8 @@ private fun Context.hasLocationPermission(): Boolean =
  * Map-first home screen. The map itself is a slot ([mapContent]) so the overlays can be tested
  * without MapLibre. What sits on top depends on the planner: the search pill and legend while browsing,
  * a place card, or the trip header and the routes panel while planning; while riding, the navigation
- * (next instruction, time left) replaces all of it, and its summary at the end.
+ * (next instruction, time left) replaces all of it, and its summary at the end — on top and at the bottom
+ * with the phone upright, in a column on the left with the phone sideways.
  */
 @Composable
 fun HomeScreen(
@@ -372,24 +393,60 @@ fun HomeScreen(
     var bottomPx by remember { mutableIntStateOf(0) }
     val statusBars = WindowInsets.statusBars.asPaddingValues()
     val navigationBars = WindowInsets.navigationBars.asPaddingValues()
+    val safeDrawing = WindowInsets.safeDrawing.asPaddingValues()
+    val layoutDirection = LocalLayoutDirection.current
     val top = with(density) { topPx.toDp() }
     val bottom = with(density) { bottomPx.toDp() }
-    val insets = MapInsets(
-        controls = PaddingValues(
-            start = 16.dp,
-            top = max(top, statusBars.calculateTopPadding() + 64.dp) + 16.dp,
-            bottom = max(bottom, navigationBars.calculateBottomPadding()) + 8.dp,
-        ),
-        camera = PaddingValues(
-            start = 40.dp,
-            end = 40.dp,
-            top = max(top, statusBars.calculateTopPadding()) + 24.dp,
-            bottom = max(bottom, navigationBars.calculateBottomPadding()) + 24.dp,
-        ),
-    )
 
     BoxWithConstraints(modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer)) {
         val screenHeight = maxHeight
+        // The phone sideways on the handlebar (a GIRA bike's holder takes it that way): the navigation moves
+        // to a column on the left, so the map keeps the whole height on the right for the road ahead.
+        val sideways = navigation.showing && maxWidth > maxHeight
+        val sidePanelWidth = (maxWidth * 0.4f).coerceIn(240.dp, 400.dp)
+        // Where the side panel ends and the map is free.
+        val sidePanelEnd = safeDrawing.calculateStartPadding(layoutDirection) + 16.dp + sidePanelWidth
+        val insets = if (sideways) {
+            MapInsets(
+                controls = PaddingValues(
+                    start = sidePanelEnd + 16.dp,
+                    top = statusBars.calculateTopPadding() + 16.dp,
+                    bottom = navigationBars.calculateBottomPadding() + 8.dp,
+                ),
+                camera = PaddingValues(
+                    start = sidePanelEnd + 24.dp,
+                    end = safeDrawing.calculateEndPadding(layoutDirection) + 24.dp,
+                    top = statusBars.calculateTopPadding() + 24.dp,
+                    bottom = navigationBars.calculateBottomPadding() + 24.dp,
+                ),
+                follow = PaddingValues(
+                    start = sidePanelEnd,
+                    end = safeDrawing.calculateEndPadding(layoutDirection),
+                    top = safeDrawing.calculateTopPadding(),
+                    bottom = safeDrawing.calculateBottomPadding(),
+                ),
+            )
+        } else {
+            MapInsets(
+                controls = PaddingValues(
+                    start = 16.dp,
+                    top = max(top, statusBars.calculateTopPadding() + 64.dp) + 16.dp,
+                    bottom = max(bottom, navigationBars.calculateBottomPadding()) + 8.dp,
+                ),
+                camera = PaddingValues(
+                    start = 40.dp,
+                    end = 40.dp,
+                    top = max(top, statusBars.calculateTopPadding()) + 24.dp,
+                    bottom = max(bottom, navigationBars.calculateBottomPadding()) + 24.dp,
+                ),
+                // Room for the usual instruction card and the bottom sheet rather than their measured heights:
+                // the camera would jump each time the card grows a line.
+                follow = PaddingValues(
+                    top = statusBars.calculateTopPadding() + NAVIGATION_TOP_ROOM,
+                    bottom = navigationBars.calculateBottomPadding() + NAVIGATION_BOTTOM_ROOM,
+                ),
+            )
+        }
         // On short screens a tall panel (route details, Descobrir) leaves no room between it and the top
         // bar for the location button (40 dp and its margins): hidden rather than drawn over the bar.
         val roomForLocationButton = screenHeight - top - bottom >= 72.dp
@@ -408,6 +465,34 @@ fun HomeScreen(
                     modifier = Modifier.align(Alignment.Center).padding(32.dp),
                 )
             }
+        }
+
+        // --- riding with the phone sideways ------------------------------------------------------
+        if (sideways) {
+            NavigationSidePanel(
+                state = navigation,
+                actions = navigationActions,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxHeight()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Start + WindowInsetsSides.Vertical))
+                    .padding(start = 16.dp, top = 12.dp, bottom = 12.dp)
+                    .width(sidePanelWidth),
+            )
+            // Over the map, right of the panel: the messages, the voice switch and "Recentrar".
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Bottom))
+                    .padding(start = sidePanelEnd + 16.dp, end = 16.dp, bottom = 12.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                SnackbarHost(snackbarHostState)
+                if (navigation.active) NavigationButtons(navigation, navigationActions)
+            }
+            return@BoxWithConstraints
         }
 
         // --- top ---------------------------------------------------------------------------------

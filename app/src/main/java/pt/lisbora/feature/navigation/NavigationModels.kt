@@ -68,6 +68,8 @@ data class GiraNavigation(
     val swapStation: GiraStation? = null,
     val atSwapStation: Boolean = false,
     val swaps: Int = 0,
+    /** Before the trip starts: how far the pick-up station is from the last fix (null before the first). */
+    val toPickUpM: Double? = null,
 ) {
     val started: Boolean get() = startedAtMs != null
     val leftS: Double get() = GiraPeriod.PERIOD_S - elapsedS

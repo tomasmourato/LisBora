@@ -15,4 +15,7 @@ object MapDefaults {
 
     /** Close enough to see the next junction while riding. */
     const val NAVIGATION_ZOOM = 16.5
+
+    /** Tilted while riding, so the road ahead takes most of the map. */
+    const val NAVIGATION_TILT = 45.0
 }
