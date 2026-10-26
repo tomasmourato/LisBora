@@ -33,7 +33,7 @@ Decisões tomadas contigo:
 | Motor de rotas | **Router próprio em Kotlin a correr no dispositivo**, num módulo JVM puro. O GraphHopper 11.1 só é usado **na construção dos dados**, no PC ou no CI. | Pediste "tudo no telemóvel". O GraphHopper deixou de suportar Android oficialmente depois da versão 1.0. Além disso, os modelos personalizados dele são compilados em tempo de execução com o **Janino** (bytecode JVM), o que não funciona em ART. Usá-lo na construção aproveita o parsing de OSM, que está muito testado (acessos, sentidos únicos incluindo `oneway:bicycle`, barreiras, piso), e a elevação. No telemóvel corre um A* simples sobre um grafo pequeno, só da região de Lisboa, que podemos controlar e testar por completo. |
 | Ciclovias no encaminhamento | **Conflação ao nível de cada aresta** entre as linhas da CML e o grafo OSM, feita no pipeline. Cada aresta fica com a classe de infraestrutura da tabela acima. | Não dependemos do OSM estar completo. O mapa e o router usam **a mesma versão** dos dados da CML. |
 | Mapa | MapLibre Android 13.x (versão estável fixada) dentro de `AndroidView`, com um extrato **Protomaps PMTiles** offline (`pmtiles://file://`, suportado desde a 11.7.0) e um estilo próprio para ciclismo. | Não precisa de chaves nem de servidor e funciona offline. O `maplibre-compose` ainda está na 0.x e a API não é estável. |
-| Pesquisa de moradas | Índice **SQLite FTS4 offline**, gerado a partir do OSM (ruas, números de porta, POIs). | A instância pública do Photon é "só para demonstração". Assim não há API nem chaves. |
+| Pesquisa de moradas | Índice **offline próprio** (`search.lbs`, prefixos de palavras), gerado a partir do OSM (ruas, números de porta, POIs, freguesias). Na Fase 3 substituiu o SQLite FTS4 previsto: o mesmo código Kotlin normaliza o texto no pipeline e na app, testa-se na JVM e ordena por proximidade sem depender do tokenizador do SQLite de cada telemóvel. | A instância pública do Photon é "só para demonstração". Assim não há API nem chaves. |
 | Preferências | **DataStore**, não Room | Room fica reservado para favoritos, histórico e rotas guardadas. |
 | Rede | Só **OkHttp**, para descarregar pacotes de dados. Não uso Retrofit. | Não há API REST. |
 | Backend | **Nenhum**. Os pacotes de dados são estáticos e versionados, alojados em GitHub Releases (ou Cloudflare R2). | Custo zero e nenhuma infraestrutura para manter. |
@@ -104,7 +104,7 @@ Ficheiros principais a criar (representativos):
    - nome da rua
    - semáforos, para o atraso no ETA
 6. **POIs** (OSM): miradouros, parques, bebedouros, estacionamento de bicicletas, oficinas e estações GIRA (`amenity=bicycle_rental`), monumentos.
-7. **Pesquisa**: `search.db` (SQLite FTS4, `unicode61 remove_diacritics`), aberto só para leitura com o SQLite do sistema.
+7. **Pesquisa**: `search.lbs`, um índice binário próprio (ver a tabela de decisões): palavras normalizadas sem acentos, prefixos, abreviaturas ("r.", "lg", "av"), palavras genéricas ("estação", "metro", "barco") e nomes alternativos do OSM. O contexto ("Arroios, Lisboa") vem das fronteiras de freguesias e concelhos. Pesquisas de referência em `pipeline/config/golden-searches.json`.
 8. **Mapa base**: `pmtiles extract` do build diário do Protomaps para o bbox da região. O estilo é gerado com `@protomaps/basemaps`, com fontes e sprites incluídos e versões claro e escuro.
 9. **Relatório QA**, que falha o build se piorar:
    - % de km da CML associados a arestas (meta inicial de 95% ou mais, ajustada depois da primeira medição)
@@ -211,6 +211,12 @@ Cada fase termina com build, testes, instalação e execução no emulador e uma
    - Pesquisa offline e pressão longa no mapa.
    - Até 3 alternativas, cartões, perfil de elevação, perigos e preferências (DataStore).
    - Favoritos e histórico (Room).
+   - **Feito (26/10/2026).**
+     - O pacote embutido passa a levar `graph.lbg` (8 MB) e `search.lbs` (4,8 MB, 78 mil entradas: 13 mil ruas, 26 mil locais, 38 mil moradas e 630 localidades). `pipeline search` constrói o índice em ~30 s e só o escreve se as 12 pesquisas de referência passarem.
+     - Alternativas pelo método de penalização (até 2, no máximo 30% mais caras e com sobreposição de Jaccard ≤ 0,6; respeitam a inclinação máxima quando a melhor rota a respeita). A app mostra a melhor rota primeiro e as alternativas logo a seguir. No emulador, com o build de debug, a melhor rota de Chiado a Belém demora ~0,75 s e as três ~1,6 s.
+     - Perigos por rota: carris de elétrico, calçada, trânsito intenso sem ciclovia, subidas e descidas de 8% ou mais em 50 m, troços a pé e barco. Cartões com tempo, distância, subida, % de infraestrutura e rótulos (Recomendada, Mais rápida, Mais ciclovia, Menos subida). Detalhes com infraestrutura, stress, perfil de elevação interativo e lista de perigos. A rota pode ser colorida por infraestrutura, declive ou stress.
+     - Pesquisa, cartão de local, pressão longa (nome da morada, do local ou da rua mais próxima) e "escolher no mapa". Preferências em DataStore; Casa, Trabalho, favoritos e recentes em Room. Tudo fica no telemóvel.
+     - Por afinar: o router ainda escolhe descidas íngremes em calçada (ex.: 20% logo à saída do Chiado) quando não se ativa "Evitar calçada"; a penalização dessas descidas deve subir com o QA das rotas de referência.
 4. **Descobrir**
    - UI (duração, motivo, circular ou A→B), `DiscoveryEngine`, chips explicativos, "Outra rota" e guardar.
    - Camada de POIs.

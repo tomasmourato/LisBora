@@ -35,7 +35,6 @@ data class HomeUiState(
 )
 
 enum class HomeMessage(@param:StringRes val textRes: Int) {
-    SearchComingSoon(R.string.home_search_coming_soon),
     DiscoverComingSoon(R.string.home_discover_coming_soon),
     LocationPermissionDenied(R.string.message_location_denied),
     OutsideServiceArea(R.string.message_outside_area),
@@ -65,8 +64,6 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
-
-    fun onSearchClick() = showMessage(HomeMessage.SearchComingSoon)
 
     fun onDiscoverClick() = showMessage(HomeMessage.DiscoverComingSoon)
 

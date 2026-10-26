@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.androidx.room)
 }
 
 android {
@@ -45,6 +46,11 @@ android {
     }
 }
 
+room {
+    // Versioned schemas, so future migrations can be tested against them.
+    schemaDirectory("$projectDir/schemas")
+}
+
 dependencies {
     implementation(project(":core:routing"))
 
@@ -60,6 +66,11 @@ dependencies {
 
     implementation(libs.maplibre.android)
     implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

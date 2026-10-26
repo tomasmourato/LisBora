@@ -27,10 +27,10 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
     private val fullTime = FloatArray(graph.edgeCount * 2) { Float.NaN }
 
     /**
-     * Lower bound of cost per metre over any edge, for an admissible A* heuristic:
-     * the smallest comfort factor at the fastest possible speed.
+     * Lower bound of cost per metre over any edge, for an admissible A* heuristic: the smallest comfort
+     * factor these preferences can give (every other multiplier is at least 1) at the fastest possible speed.
      */
-    val minCostPerMetre: Double = MIN_FACTOR / max(
+    val minCostPerMetre: Double = EdgeInfra.entries.minOf { infraFactor(it, stress = 1) }.coerceAtMost(1.0) / max(
         preferences.rider.level.maxDescentKmh / 3.6 * preferences.rider.personalFactor,
         FERRY_SPEED_MPS,
     )
@@ -160,24 +160,7 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
         if (flags.isSteps) return Double.POSITIVE_INFINITY
         if (flags.isFerry) return if (preferences.allowFerries) 1.0 else Double.POSITIVE_INFINITY
         val bike = preferences.rider.bike
-        var factor = when (flags.infra) {
-            EdgeInfra.SEGREGATED_TRACK -> if (preferences.preferSegregated) 0.6 else 0.75
-            EdgeInfra.PAINTED_LANE -> 0.9 * (1 + 0.1 * (flags.stress - 1))
-            EdgeInfra.SHARED_STREET_30 -> 0.95 * (1 + 0.05 * (flags.stress - 1))
-            EdgeInfra.SHARED_WITH_PEDESTRIANS -> when (preferences.purpose) {
-                TripPurpose.LEISURE -> 0.85
-                TripPurpose.COMMUTE -> 0.95
-                TripPurpose.SPORT -> 1.2
-            }
-            EdgeInfra.TRAIL -> when (bike) {
-                BikeType.ROAD -> 4.0
-                BikeType.CITY -> 1.5
-                BikeType.ELECTRIC -> 1.4
-                BikeType.MOUNTAIN -> 0.9
-            }
-            EdgeInfra.OSM_CYCLEWAY -> 0.8
-            EdgeInfra.NONE -> STRESS_FACTORS[flags.stress - 1] * if (preferences.preferSegregated) 1.15 else 1.0
-        }
+        var factor = infraFactor(flags.infra, flags.stress)
         if (flags.mode(reverse) == TravelMode.PUSH) factor *= PUSH_FACTOR
         if (flags.tram) factor *= if (preferences.avoidTramTracks) 3.0 else 1.4
         factor *= when (flags.surface) {
@@ -194,6 +177,26 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
         return factor
     }
 
+    /** How the rider values a kind of infrastructure at a given traffic stress (below 1 = preferred). */
+    private fun infraFactor(infra: EdgeInfra, stress: Int): Double = when (infra) {
+        EdgeInfra.SEGREGATED_TRACK -> if (preferences.preferSegregated) 0.6 else 0.75
+        EdgeInfra.PAINTED_LANE -> 0.9 * (1 + 0.1 * (stress - 1))
+        EdgeInfra.SHARED_STREET_30 -> 0.95 * (1 + 0.05 * (stress - 1))
+        EdgeInfra.SHARED_WITH_PEDESTRIANS -> when (preferences.purpose) {
+            TripPurpose.LEISURE -> 0.85
+            TripPurpose.COMMUTE -> 0.95
+            TripPurpose.SPORT -> 1.2
+        }
+        EdgeInfra.TRAIL -> when (preferences.rider.bike) {
+            BikeType.ROAD -> 4.0
+            BikeType.CITY -> 1.5
+            BikeType.ELECTRIC -> 1.4
+            BikeType.MOUNTAIN -> 0.9
+        }
+        EdgeInfra.OSM_CYCLEWAY -> 0.8
+        EdgeInfra.NONE -> STRESS_FACTORS[stress - 1] * if (preferences.preferSegregated) 1.15 else 1.0
+    }
+
     /** Extra multiplier for the grade of a segment in the direction of travel. */
     private fun gradeFactor(flags: EdgeFlags, grade: Double): Double {
         var factor = 1.0
@@ -206,7 +209,6 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
     companion object {
         /** Multipliers by traffic stress (1..4) on roads without cycling infrastructure. */
         val STRESS_FACTORS = doubleArrayOf(1.0, 1.2, 1.7, 2.6)
-        const val MIN_FACTOR = 0.6
         const val PUSH_FACTOR = 2.5
         const val STEEP_CLIMB_FACTOR = 6.0
         const val STEEP_DESCENT_GRADE = 0.08

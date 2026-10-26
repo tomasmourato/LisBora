@@ -30,12 +30,14 @@ ANDROID_HOME="C:/Users/mrttm/AppData/Local/Android/Sdk"
 - Instalar e abrir: `$ANDROID_HOME/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk && $ANDROID_HOME/platform-tools/adb shell am start -n pt.lisbora/.MainActivity`
 - Testes de UI (com o emulador ligado): `./gradlew :app:connectedDebugAndroidTest`. No fim, desinstalam a app; volta a instalá-la antes de a correres.
 - Pipeline: `./gradlew :pipeline:run --args="help"`. Os caminhos são relativos à raiz.
-- Grafo de rotas: `./gradlew :pipeline:run --args="build"` (usa 8 GB; ~1,5 min com caches) e `./gradlew :pipeline:goldenRoutes`. Caches em `pipeline/work/{osm,gh,dem}`; relatório em `pipeline/work/qa/report.md`; o grafo só vai para `--out` (por omissão `pipeline/work/datapack`) se o QA passar, mas fica sempre em `pipeline/work/graph-candidate.lbg`. Para ver uma rota troço a troço: `--args="golden-routes --detalhe sim --graph pipeline/work/graph-candidate.lbg"`.
+- Grafo de rotas: `./gradlew :pipeline:run --args="build"` (usa 8 GB; ~1,5 min com caches) e `./gradlew :pipeline:goldenRoutes` (mostra também as alternativas e o tempo de cálculo). Caches em `pipeline/work/{osm,gh,dem}`; relatório em `pipeline/work/qa/report.md`; o grafo só vai para `--out` (por omissão `pipeline/work/datapack`) se o QA passar, mas fica sempre em `pipeline/work/graph-candidate.lbg`. Para ver uma rota troço a troço: `--args="golden-routes --detalhe sim --graph pipeline/work/graph-candidate.lbg"`.
+- Índice de pesquisa: `./gradlew :pipeline:run --args="search"` (~30 s com o extrato em cache). Só escreve se as pesquisas de referência (`pipeline/config/golden-searches.json`) passarem; o candidato fica sempre em `pipeline/work/search-candidate.lbs`. Para ver como um local está mapeado no OSM: `--args='search --mostrar "lx factory"'`.
 - Localização simulada no emulador (o `geo fix` não funciona nesta imagem):
   `adb shell appops set com.android.shell android:mock_location allow`, depois `adb shell cmd location providers add-test-provider gps` e `adb shell cmd location providers set-test-provider-location gps --location 38.7139,-9.1427`.
 
 ## Pacote de dados embutido (`app/src/main/assets/datapack`)
 A app copia-o para `filesDir/datapack` no arranque, só os ficheiros cujo SHA-256 mudou, segundo o `manifest.json`. Cada comando do pipeline regenera o manifesto.
 - Rede ciclável da CML: `./gradlew :pipeline:run --args="fetch-cml --out app/src/main/assets/datapack"`
+- Grafo (`graph.lbg`, ~8 MB) e índice de pesquisa (`search.lbs`, ~5 MB), versionados no git como o mapa base: `build --out app/src/main/assets/datapack` e `search --out app/src/main/assets/datapack`. Se mudares a rede da CML, reconstrói o grafo a seguir, para o mapa e o router usarem a mesma versão.
 - Mapa base (cerca de 18 MB, versionado no git: atualiza-o com parcimónia): `./gradlew :pipeline:run --args="basemap --out app/src/main/assets/datapack"`. Precisa do `pmtiles` CLI em `pipeline/work/tools/`.
 - Estilos, fontes e sprites (`app/src/main/assets/map`): `cd pipeline/tools/style && npm ci && npm run generate`.

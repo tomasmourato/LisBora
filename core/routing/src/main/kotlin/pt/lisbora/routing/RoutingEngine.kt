@@ -55,11 +55,60 @@ class RoutingEngine(
         else RouteResult.Failure(RouteResult.Reason.NO_PATH)
     }
 
+    /** The best route plus up to [maxAlternatives] clearly different ones, see [alternatives]. */
+    fun route(from: GeoPoint, to: GeoPoint, preferences: RoutingPreferences, maxAlternatives: Int): RouteResult {
+        val start = snap(from, preferences) ?: return RouteResult.Failure(RouteResult.Reason.START_NOT_ON_NETWORK)
+        val end = snap(to, preferences) ?: return RouteResult.Failure(RouteResult.Reason.END_NOT_ON_NETWORK)
+        return alternatives(start, end, preferences, maxAlternatives)
+    }
+
+    /**
+     * Penalty method: after each route found, the edges it uses cost [ALTERNATIVE_PENALTY]x more and the
+     * search runs again. A candidate is kept when its real cost stays within [MAX_ALTERNATIVE_STRETCH]x the
+     * best and it shares at most [MAX_ALTERNATIVE_OVERLAP] of its length with every route already kept
+     * (Jaccard index over edge lengths). When the best route keeps under the rider's maximum grade, so must
+     * the alternatives. Penalties are >= 1, so the A* heuristic stays admissible.
+     */
+    fun alternatives(
+        start: Snap,
+        end: Snap,
+        preferences: RoutingPreferences,
+        maxAlternatives: Int = 2,
+        /** The best route between the same snaps, when already computed (to show it before the alternatives). */
+        best: Route? = null,
+    ): RouteResult {
+        val weighting = weighting(preferences)
+        val best = best ?: Search(weighting, start, end, HEURISTIC_SAFETY).let { first ->
+            if (!first.run()) return RouteResult.Failure(RouteResult.Reason.NO_PATH)
+            first.buildRoute()
+        }
+        if (maxAlternatives <= 0) return RouteResult.Success(best)
+
+        val gradeLimit = preferences.maxGradePercent?.takeIf { best.maxGradePercent <= it + GRADE_TOLERANCE_PERCENT }
+        val penalty = FloatArray(graph.edgeCount) { 1f }
+        val kept = mutableListOf<Route>()
+        var last = best
+        for (attempt in 1..maxAlternatives + EXTRA_ALTERNATIVE_ATTEMPTS) {
+            last.legs.forEach { penalty[it.edge] *= ALTERNATIVE_PENALTY }
+            val search = Search(weighting, start, end, HEURISTIC_SAFETY, penalty)
+            if (!search.run()) break
+            val candidate = search.buildRoute()
+            last = candidate
+            if (candidate.cost > best.cost * MAX_ALTERNATIVE_STRETCH) continue
+            if (gradeLimit != null && candidate.maxGradePercent > gradeLimit + GRADE_TOLERANCE_PERCENT) continue
+            if ((kept + best).all { overlap(it, candidate) <= MAX_ALTERNATIVE_OVERLAP }) kept += candidate
+            if (kept.size >= maxAlternatives) break
+        }
+        return RouteResult.Success(best, kept.sortedBy { it.cost })
+    }
+
     private inner class Search(
         private val weighting: BikeWeighting,
         private val start: Snap,
         private val end: Snap,
         heuristicWeight: Double,
+        /** Per-edge cost multipliers (>= 1) used to look for alternatives; null for a plain search. */
+        private val penalty: FloatArray? = null,
     ) {
         private val target = graph.edgeCount * 2
         private val cost = DoubleArray(target + 1) { Double.POSITIVE_INFINITY }
@@ -81,7 +130,7 @@ class RoutingEngine(
                 val via = graph.headNode(key)
                 tryFinish(key, via)
                 graph.forEachOutgoing(via) { out ->
-                    val edgeCost = weighting.edgeCost(out)
+                    val edgeCost = weighting.edgeCost(out) * (penalty?.get(graph.edgeOf(out)) ?: 1f)
                     if (edgeCost.isFinite()) {
                         val turn = weighting.turnCost(key, via, out)
                         if (turn.isFinite()) relax(out, cost[key] + turn + edgeCost, key)
@@ -180,13 +229,38 @@ class RoutingEngine(
                 }
             }
             if (builder.isEmpty()) builder.addPoint(start.point, graph.pointElevation(start.edge, 0))
-            return builder.build(cost[target], settled)
+            return builder.build(settled)
         }
     }
 
     companion object {
         /** Slightly shrinks the heuristic so rounding never makes it overestimate. */
         const val HEURISTIC_SAFETY = 0.99
+
+        /** Cost multiplier applied to the edges of each route found while looking for alternatives. */
+        const val ALTERNATIVE_PENALTY = 1.5f
+
+        /** Alternatives may cost at most this much more than the best route. */
+        const val MAX_ALTERNATIVE_STRETCH = 1.3
+
+        /** Largest Jaccard overlap (by length) an alternative may have with any route already kept. */
+        const val MAX_ALTERNATIVE_OVERLAP = 0.6
+
+        /** Searches allowed beyond the requested alternatives, for candidates that turn out too similar or too long. */
+        const val EXTRA_ALTERNATIVE_ATTEMPTS = 3
+
+        /** Slack when comparing a route's steepest grade with the rider's maximum (DEM noise). */
+        const val GRADE_TOLERANCE_PERCENT = 0.5
+
+        /** Jaccard index of two routes over the lengths of the edges they use (0 = disjoint, 1 = same). */
+        fun overlap(a: Route, b: Route): Double {
+            val lengthsA = a.legs.groupingBy { it.edge }.fold(0.0) { sum, leg -> sum + leg.lengthM }
+            val lengthsB = b.legs.groupingBy { it.edge }.fold(0.0) { sum, leg -> sum + leg.lengthM }
+            val shared = lengthsA.entries.sumOf { (edge, length) -> min(length, lengthsB[edge] ?: 0.0) }
+            val union = a.distanceM + b.distanceM - shared
+            return if (union <= 0) 1.0 else shared / union
+        }
+
         private const val NONE = -1
         private const val FROM_START = -2
         private const val DIRECT = -3
@@ -204,6 +278,7 @@ private class RouteBuilder(private val graph: RoutingGraph, private val weightin
     private val legs = ArrayList<RouteLeg>()
     private var distance = 0.0
     private var time = 0.0
+    private var cost = 0.0
     private var ascent = 0.0
     private var descent = 0.0
 
@@ -216,13 +291,18 @@ private class RouteBuilder(private val graph: RoutingGraph, private val weightin
     }
 
     fun addTurn(inKey: Int, outKey: Int) {
-        time += weighting.turnTime(inKey, graph.tailNode(outKey), outKey)
+        val via = graph.tailNode(outKey)
+        time += weighting.turnTime(inKey, via, outKey)
+        cost += weighting.turnCost(inKey, via, outKey)
     }
 
     fun addLeg(edge: Int, reverse: Boolean, from: Double, to: Double) {
         val length = max(0.0, to - from)
         if (length <= RoutingEngine.ZERO_LENGTH_M) return
         val legTime = weighting.partialTime(edge, reverse, from, to)
+        // Whole edges use the cached cost, exactly as the search added it.
+        cost += if (from <= 0.0 && to >= graph.length(edge)) weighting.edgeCost(graph.key(edge, reverse))
+        else weighting.partialCost(edge, reverse, from, to)
         val first = if (points.isEmpty()) 0 else points.size - 1
         val slice = slice(edge, from, to)
         if (reverse) slice.reverse()
@@ -234,14 +314,15 @@ private class RouteBuilder(private val graph: RoutingGraph, private val weightin
             }
             addPoint(point, elevation)
         }
-        legs += RouteLeg(edge, reverse, from, to, graph.flags(edge), graph.name(edge), length, legTime, first)
+        legs += RouteLeg(edge, reverse, from, to, graph.flags(edge), graph.name(edge), length, legTime, first, along[first])
         distance += length
         time += legTime
     }
 
-    fun build(cost: Double, settled: Int) = Route(
+    fun build(settled: Int) = Route(
         points = points.toList(),
         elevations = elevations.toList(),
+        distances = along.toList(),
         legs = legs.toList(),
         distanceM = distance,
         durationS = time,

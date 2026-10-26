@@ -15,6 +15,8 @@ import org.junit.runner.RunWith
 import pt.lisbora.data.datapack.CycleNetworkMeta
 import pt.lisbora.data.map.MapData
 import pt.lisbora.feature.map.CycleSegment
+import pt.lisbora.feature.planner.PlannerActionsAdapter
+import pt.lisbora.feature.planner.PlannerUiState
 import pt.lisbora.routing.model.CycleInfraClass
 import pt.lisbora.ui.theme.LisboraTheme
 import java.time.Instant
@@ -41,6 +43,7 @@ class HomeScreenTest {
     @Composable
     private fun Screen(
         state: HomeUiState,
+        planner: PlannerUiState = PlannerUiState(),
         onSearchClick: () -> Unit = {},
         onDiscoverClick: () -> Unit = {},
         onLegendToggle: () -> Unit = {},
@@ -51,13 +54,16 @@ class HomeScreenTest {
             HomeScreen(
                 uiState = state,
                 darkTheme = false,
-                onSearchClick = onSearchClick,
                 onDiscoverClick = onDiscoverClick,
                 onMessageShown = {},
                 onLegendToggle = onLegendToggle,
                 onCycleNetworkVisibleChange = {},
                 onSegmentDismiss = onSegmentDismiss,
                 onMyLocationClick = onMyLocationClick,
+                planner = planner,
+                plannerActions = object : PlannerActionsAdapter() {
+                    override fun onSearchOpen() = onSearchClick()
+                },
             ) {}
         }
     }

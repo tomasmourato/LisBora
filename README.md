@@ -11,7 +11,7 @@ As rotas são calculadas **no telemóvel**: não há servidor nem contas. O plan
 | 0 | Ambiente e esqueleto do projeto | ✅ |
 | 1 | Mapa offline e rede ciclável da CML | ✅ |
 | 2 | Grafo e router (JVM) | ✅ |
-| 3 | Planear A→B | — |
+| 3 | Planear A→B | ✅ |
 | 4 | Descobrir (rotas automáticas) | — |
 | 5 | Seguir rota | — |
 | 6 | Atualização de dados sem nova versão da app | — |
@@ -20,8 +20,8 @@ As rotas são calculadas **no telemóvel**: não há servidor nem contas. O plan
 ## Estrutura
 
 - `app/` — app Android (Kotlin, Jetpack Compose, Material 3, Hilt).
-- `core/routing/` — biblioteca Kotlin/JVM pura partilhada pela app e pelo pipeline (grafo, router, ETA).
-- `pipeline/` — ferramenta de linha de comandos que constrói os pacotes de dados (rede ciclável da CML, mapa base, grafo de rotas a partir do OpenStreetMap com o GraphHopper). Não corre no telemóvel.
+- `core/routing/` — biblioteca Kotlin/JVM pura partilhada pela app e pelo pipeline (grafo, router, alternativas, perigos, ETA, pesquisa offline).
+- `pipeline/` — ferramenta de linha de comandos que constrói os pacotes de dados (rede ciclável da CML, mapa base, grafo de rotas a partir do OpenStreetMap com o GraphHopper, índice de pesquisa). Não corre no telemóvel.
 
 ## Compilar
 
@@ -40,6 +40,14 @@ Para construir o grafo de rotas (descarrega o extrato OSM de Portugal, ~430 MB, 
 ```
 
 O grafo fica em `pipeline/work/datapack/graph.lbg` e o relatório de qualidade em `pipeline/work/qa/report.md`.
+
+Para construir o índice de pesquisa offline (ruas, moradas, locais; usa o mesmo extrato OSM, ~30 s):
+
+```bash
+./gradlew :pipeline:run --args="search"
+```
+
+A app traz o grafo e o índice no pacote embutido (`app/src/main/assets/datapack`). Para os atualizar, usa `--out app/src/main/assets/datapack` nos dois comandos.
 
 ## Dados e licenças
 

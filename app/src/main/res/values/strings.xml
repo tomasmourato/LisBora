@@ -4,7 +4,6 @@
 
     <string name="home_search_hint">Para onde vais?</string>
     <string name="home_discover">Descobrir</string>
-    <string name="home_search_coming_soon">A pesquisa de destinos chega na Fase 3.</string>
     <string name="home_discover_coming_soon">As rotas automáticas chegam na Fase 4.</string>
 
     <string name="map_legend_toggle">Legenda da rede ciclável</string>
@@ -30,4 +29,177 @@
     <string name="message_outside_area">Estás fora da área coberta pela LisBora.</string>
     <string name="message_location_unavailable">A localização ainda não está disponível. Tenta de novo daqui a pouco.</string>
     <string name="message_map_failed">Não foi possível carregar o mapa.</string>
+
+    <!-- Pesquisa -->
+    <string name="search_hint_place">Pesquisar rua, local ou morada</string>
+    <string name="search_hint_origin">Escolher a partida</string>
+    <string name="search_hint_destination">Escolher o destino</string>
+    <string name="search_hint_home">Morada de casa</string>
+    <string name="search_hint_work">Morada do trabalho</string>
+    <string name="search_back">Voltar</string>
+    <string name="search_clear">Limpar a pesquisa</string>
+    <string name="search_my_location">A minha localização</string>
+    <string name="search_pick_on_map">Escolher no mapa</string>
+    <string name="search_home">Casa</string>
+    <string name="search_work">Trabalho</string>
+    <string name="search_tap_to_set">Toca para definir</string>
+    <string name="search_saved">Guardados</string>
+    <string name="search_recent">Recentes</string>
+    <string name="search_clear_recent">Limpar</string>
+    <string name="search_remove_saved">Remover %1$s dos guardados</string>
+    <string name="search_no_results">Sem resultados para «%1$s».</string>
+    <string name="search_no_results_hint">Experimenta outro nome ou mantém o dedo premido no mapa para escolher um ponto.</string>
+    <string name="search_failed">A pesquisa não está disponível neste momento.</string>
+    <string name="search_searching">A pesquisar…</string>
+
+    <!-- Locais -->
+    <string name="place_pin">Ponto no mapa</string>
+    <string name="place_directions">Direções</string>
+    <string name="place_start_here">Partir daqui</string>
+    <string name="place_save">Guardar</string>
+    <string name="place_saved">Guardado</string>
+    <string name="place_more">Mais opções</string>
+    <string name="place_set_home">Definir como casa</string>
+    <string name="place_set_work">Definir como trabalho</string>
+    <string name="place_distance">a %1$s</string>
+    <string name="place_resolving">A procurar o nome…</string>
+
+    <string name="category_street">Rua</string>
+    <string name="category_address">Morada</string>
+    <string name="category_locality">Localidade</string>
+    <string name="category_neighbourhood">Bairro</string>
+    <string name="category_metro">Estação de metro</string>
+    <string name="category_train">Estação de comboio</string>
+    <string name="category_ferry">Terminal fluvial</string>
+    <string name="category_bus">Terminal rodoviário</string>
+    <string name="category_bike_share">Bicicletas partilhadas</string>
+    <string name="category_bike_shop">Loja de bicicletas</string>
+    <string name="category_viewpoint">Miradouro</string>
+    <string name="category_park">Parque ou jardim</string>
+    <string name="category_beach">Praia</string>
+    <string name="category_museum">Museu</string>
+    <string name="category_monument">Monumento</string>
+    <string name="category_attraction">Atração</string>
+    <string name="category_worship">Local de culto</string>
+    <string name="category_university">Ensino superior</string>
+    <string name="category_school">Escola</string>
+    <string name="category_hospital">Hospital</string>
+    <string name="category_health">Saúde</string>
+    <string name="category_library">Biblioteca</string>
+    <string name="category_culture">Cultura</string>
+    <string name="category_sports">Desporto</string>
+    <string name="category_market">Mercado</string>
+    <string name="category_shopping">Compras</string>
+    <string name="category_shop">Loja</string>
+    <string name="category_food">Restauração</string>
+    <string name="category_hotel">Alojamento</string>
+    <string name="category_public_service">Serviço público</string>
+    <string name="category_other">Local</string>
+
+    <string name="planner_saved_home">Guardado como casa.</string>
+    <string name="planner_saved_work">Guardado como trabalho.</string>
+    <string name="planner_saved_favourite">Guardado.</string>
+    <string name="planner_removed_favourite">Removido dos guardados.</string>
+    <string name="planner_point_outside">Esse ponto está fora da área coberta pela LisBora.</string>
+
+    <!-- Direções -->
+    <string name="directions_origin">Partida</string>
+    <string name="directions_destination">Destino</string>
+    <string name="directions_choose_origin">Escolher a partida</string>
+    <string name="directions_choose_destination">Escolher o destino</string>
+    <string name="directions_swap">Trocar partida e destino</string>
+    <string name="directions_close">Fechar as direções</string>
+    <string name="directions_preferences">Preferências de rota</string>
+    <string name="pick_origin">Toca no mapa para escolher a partida</string>
+    <string name="pick_destination">Toca no mapa para escolher o destino</string>
+    <string name="pick_place">Toca no mapa para escolher um ponto</string>
+    <string name="pick_home">Toca no mapa para escolher a casa</string>
+    <string name="pick_work">Toca no mapa para escolher o trabalho</string>
+    <string name="pick_cancel">Cancelar</string>
+
+    <string name="routes_loading">A calcular rotas…</string>
+    <string name="routes_waiting">Escolhe a partida e o destino.</string>
+    <string name="routes_retry">Tentar de novo</string>
+    <string name="route_failure_start">Não há nenhuma rua onde se possa andar de bicicleta perto da partida.</string>
+    <string name="route_failure_end">Não há nenhuma rua onde se possa andar de bicicleta perto do destino.</string>
+    <string name="route_failure_no_path">Não foi possível ligar a partida ao destino com estas preferências.</string>
+    <string name="route_failure_location">Não foi possível obter a tua localização. Escolhe a partida.</string>
+    <string name="route_failure_outside">A partida ou o destino estão fora da área coberta pela LisBora.</string>
+    <string name="route_failure_same_place">A partida e o destino são o mesmo sítio.</string>
+    <string name="route_failure_unavailable">As rotas não estão disponíveis neste momento.</string>
+
+    <string name="route_label_recommended">Recomendada</string>
+    <string name="route_label_fastest">Mais rápida</string>
+    <string name="route_label_most_infra">Mais ciclovia</string>
+    <string name="route_label_flattest">Menos subida</string>
+    <string name="route_option">Rota %1$d de %2$d</string>
+    <string name="route_infra_share">%1$s com infraestrutura ciclável</string>
+    <string name="route_climb">sobe %1$s</string>
+    <string name="route_summary">%1$s · sobe %2$s · desce %3$s · máx. %4$s</string>
+    <string name="route_above_max_grade">Tem troços acima de %1$d%%: não há alternativa mais suave.</string>
+    <string name="route_details_show">Ver detalhes</string>
+    <string name="route_details_hide">Esconder detalhes</string>
+    <string name="route_section_infra">Infraestrutura</string>
+    <string name="route_section_stress">Trânsito</string>
+    <string name="route_section_profile">Perfil de elevação</string>
+    <string name="route_section_hazards">Atenção</string>
+    <string name="route_no_hazards">Nada a assinalar nesta rota.</string>
+    <string name="route_color_by">Cores da rota no mapa</string>
+    <string name="route_color_infra">Infraestrutura</string>
+    <string name="route_color_grade">Declive</string>
+    <string name="route_color_stress">Trânsito</string>
+    <string name="route_disclaimer">A LisBora prefere ciclovias e ruas calmas, mas nenhuma rota está livre de riscos. Circula com atenção.</string>
+
+    <string name="infra_none">Sem infraestrutura</string>
+    <string name="infra_osm_cycleway">Ciclovia (OpenStreetMap)</string>
+    <string name="infra_walk">A pé com a bicicleta</string>
+
+    <string name="stress_1">Calmo</string>
+    <string name="stress_2">Moderado</string>
+    <string name="stress_3">Intenso</string>
+    <string name="stress_4">Muito intenso</string>
+
+    <string name="grade_bucket_0">até 3%%</string>
+    <string name="grade_bucket_1">3–6%%</string>
+    <string name="grade_bucket_2">6–10%%</string>
+    <string name="grade_bucket_3">10%% ou mais</string>
+
+    <string name="hazard_tram">Carris de elétrico</string>
+    <string name="hazard_cobbles">Calçada</string>
+    <string name="hazard_busy_road">Trânsito intenso sem ciclovia</string>
+    <string name="hazard_descent">Descida de %1$s</string>
+    <string name="hazard_climb">Subida de %1$s</string>
+    <string name="hazard_walk">A pé com a bicicleta</string>
+    <string name="hazard_ferry">Barco: horário e bilhete à parte</string>
+    <string name="hazard_where">%1$s, ao fim de %2$s</string>
+
+    <string name="profile_description">Perfil de elevação: de %1$s a %2$s, mínimo %3$s, máximo %4$s</string>
+    <string name="profile_inspect">%1$s · %2$s · %3$s</string>
+
+    <!-- Preferências -->
+    <string name="prefs_title">Preferências de rota</string>
+    <string name="prefs_bike">Bicicleta</string>
+    <string name="bike_city">Cidade</string>
+    <string name="bike_road">Estrada</string>
+    <string name="bike_mountain">BTT / gravel</string>
+    <string name="bike_electric">Elétrica / GIRA</string>
+    <string name="prefs_level">Ritmo</string>
+    <string name="level_relaxed">Descontraído</string>
+    <string name="level_medium">Médio</string>
+    <string name="level_sporty">Desportivo</string>
+    <string name="prefs_purpose">Motivo</string>
+    <string name="purpose_commute">Deslocação</string>
+    <string name="purpose_leisure">Lazer</string>
+    <string name="purpose_sport">Desporto</string>
+    <string name="prefs_max_grade">Inclinação máxima</string>
+    <string name="grade_no_limit">Sem limite</string>
+    <string name="grade_percent">%1$d%%</string>
+    <string name="prefs_avoid_cobbles">Evitar calçada</string>
+    <string name="prefs_avoid_trams">Evitar carris de elétrico</string>
+    <string name="prefs_prefer_segregated">Preferir ciclovias segregadas</string>
+    <string name="prefs_allow_ferries">Permitir travessias de barco</string>
+    <string name="prefs_done">Feito</string>
+
+    <string name="duration_minutes">%1$d min</string>
+    <string name="duration_hours">%1$d h %2$02d min</string>
 </resources>

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.graphics.RectF
 import android.view.Gravity
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -40,6 +41,8 @@ import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
+import pt.lisbora.feature.planner.CameraRequest
+import pt.lisbora.feature.planner.CameraTarget
 import pt.lisbora.routing.geo.GeoBounds
 import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.geo.ServiceArea
@@ -48,11 +51,19 @@ import kotlin.coroutines.resume
 
 enum class RecenterResult { CENTERED, OUTSIDE_SERVICE_AREA, UNAVAILABLE }
 
+private const val CAMERA_ANIMATION_MS = 700
+private const val DIMMED_NETWORK_OPACITY = 0.35f
+private const val CASING_OPACITY = 0.9f
+
 /**
- * The MapLibre map: offline basemap plus the CML cycle network. Stateless towards the caller — it
- * renders [styleJson] and reports taps; selection and visibility live in the ViewModel.
+ * The MapLibre map: offline basemap, the CML cycle network and the planned routes. Stateless towards
+ * the caller — it renders [styleJson] plus the route and marker GeoJSON, and reports taps; selection,
+ * visibility and camera requests live in the ViewModels.
  *
- * [contentPadding] keeps MapLibre's compass and attribution clear of the overlays drawn on top.
+ * [contentPadding] keeps MapLibre's compass and attribution clear of the overlays drawn on top;
+ * [cameraPadding] is the free area routes and places are framed in.
+ * In [pickMode] a tap reports a point ([onPointPicked]) instead of selecting a segment.
+ * [dimCycleNetwork] fades the network while a route is shown, so the route stands out.
  */
 @Composable
 fun LisboraMap(
@@ -65,6 +76,17 @@ fun LisboraMap(
     onSegmentClick: (CycleSegment?) -> Unit,
     onRecenterResult: (RecenterResult) -> Unit,
     modifier: Modifier = Modifier,
+    routesGeoJson: String = RouteGeoJson.EMPTY,
+    markersGeoJson: String = RouteGeoJson.EMPTY,
+    cameraRequest: CameraRequest? = null,
+    cameraPadding: PaddingValues = contentPadding,
+    pickMode: Boolean = false,
+    dimCycleNetwork: Boolean = false,
+    onLongPress: (GeoPoint) -> Unit = {},
+    onPointPicked: (GeoPoint) -> Unit = {},
+    onRouteClick: (Int) -> Unit = {},
+    onCameraIdle: (GeoPoint) -> Unit = {},
+    onCameraRequestHandled: (Long) -> Unit = {},
 ) {
     val mapView = rememberMapViewWithLifecycle()
     // [lat, lon, zoom, bearing], so the view survives theme changes and rotation.
@@ -74,7 +96,13 @@ fun LisboraMap(
     // GeoJSON of the highlighted segment, saved so the highlight survives recreation like the card does.
     var selectedFeatureJson by rememberSaveable { mutableStateOf<String?>(null) }
     val currentOnSegmentClick by rememberUpdatedState(onSegmentClick)
-    val tapSlopPx = with(LocalDensity.current) { 12.dp.toPx() }
+    val currentPickMode by rememberUpdatedState(pickMode)
+    val currentOnLongPress by rememberUpdatedState(onLongPress)
+    val currentOnPointPicked by rememberUpdatedState(onPointPicked)
+    val currentOnRouteClick by rememberUpdatedState(onRouteClick)
+    val currentOnCameraIdle by rememberUpdatedState(onCameraIdle)
+    val density = LocalDensity.current
+    val tapSlopPx = with(density) { 12.dp.toPx() }
     val context = LocalContext.current
 
     AndroidView(factory = { mapView }, modifier = modifier)
@@ -91,6 +119,7 @@ fun LisboraMap(
             m.cameraPosition.let { p ->
                 val target = p.target ?: return@let
                 savedCamera = doubleArrayOf(target.latitude, target.longitude, p.zoom, p.bearing)
+                currentOnCameraIdle(GeoPoint(target.latitude, target.longitude))
             }
         }
         m.setLatLngBoundsForCameraTarget(ServiceArea.BOUNDS.toLatLngBounds())
@@ -102,9 +131,23 @@ fun LisboraMap(
             isCompassEnabled = true
             isTiltGesturesEnabled = false
         }
+        m.addOnMapLongClickListener { latLng ->
+            currentOnLongPress(GeoPoint(latLng.latitude, latLng.longitude))
+            true
+        }
         m.addOnMapClickListener { latLng ->
+            if (currentPickMode) {
+                currentOnPointPicked(GeoPoint(latLng.latitude, latLng.longitude))
+                return@addOnMapClickListener true
+            }
             val point = m.projection.toScreenLocation(latLng)
             val area = RectF(point.x - tapSlopPx, point.y - tapSlopPx, point.x + tapSlopPx, point.y + tapSlopPx)
+            // A tap on a grey alternative selects it.
+            val alternative = m.queryRenderedFeatures(area, RouteLayers.ALT, RouteLayers.ALT_CASING).firstOrNull()
+            if (alternative != null && alternative.hasNonNullValueForProperty(RouteLayers.INDEX_PROPERTY)) {
+                currentOnRouteClick(alternative.getNumberProperty(RouteLayers.INDEX_PROPERTY).toInt())
+                return@addOnMapClickListener true
+            }
             val feature = m.queryRenderedFeatures(area, *CycleNetworkLayers.classLayers.toTypedArray()).firstOrNull()
             selectedFeatureJson = feature?.toJson()
             m.style?.showSelection(feature)
@@ -126,10 +169,57 @@ fun LisboraMap(
         CycleNetworkLayers.all.forEach { s.getLayer(it)?.setProperties(visibility) }
     }
 
+    LaunchedEffect(style, dimCycleNetwork) {
+        val s = style ?: return@LaunchedEffect
+        val opacity = PropertyFactory.lineOpacity(if (dimCycleNetwork) DIMMED_NETWORK_OPACITY else 1f)
+        CycleNetworkLayers.classLayers.forEach { s.getLayer(it)?.setProperties(opacity) }
+        s.getLayer(CycleNetworkLayers.CASING)?.setProperties(
+            PropertyFactory.lineOpacity(if (dimCycleNetwork) DIMMED_NETWORK_OPACITY else CASING_OPACITY),
+        )
+    }
+
     LaunchedEffect(style, selectedSegmentId) {
         val s = style ?: return@LaunchedEffect
         if (selectedSegmentId == null) selectedFeatureJson = null
         s.showSelection(selectedFeatureJson?.let(Feature::fromJson))
+    }
+
+    LaunchedEffect(style, routesGeoJson) {
+        style?.getSourceAs<GeoJsonSource>(RouteLayers.SOURCE)?.setGeoJson(routesGeoJson)
+    }
+
+    LaunchedEffect(style, markersGeoJson) {
+        style?.getSourceAs<GeoJsonSource>(RouteLayers.MARKER_SOURCE)?.setGeoJson(markersGeoJson)
+    }
+
+    val currentCameraPadding by rememberUpdatedState(cameraPadding)
+    val currentOnCameraRequestHandled by rememberUpdatedState(onCameraRequestHandled)
+    LaunchedEffect(map, cameraRequest?.id) {
+        val m = map ?: return@LaunchedEffect
+        val request = cameraRequest ?: return@LaunchedEffect
+        val padding = with(density) {
+            val p = currentCameraPadding
+            intArrayOf(
+                p.calculateStartPadding(LayoutDirection.Ltr).roundToPx(),
+                p.calculateTopPadding().roundToPx(),
+                p.calculateEndPadding(LayoutDirection.Ltr).roundToPx(),
+                p.calculateBottomPadding().roundToPx(),
+            )
+        }
+        val update = when (val target = request.target) {
+            is CameraTarget.Point -> CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder()
+                    .target(target.point.toLatLng())
+                    .zoom(target.zoom)
+                    .padding(padding[0].toDouble(), padding[1].toDouble(), padding[2].toDouble(), padding[3].toDouble())
+                    .build(),
+            )
+            is CameraTarget.Bounds -> CameraUpdateFactory.newLatLngBounds(
+                target.bounds.toLatLngBounds(), padding[0], padding[1], padding[2], padding[3],
+            )
+        }
+        m.animateCamera(update, CAMERA_ANIMATION_MS)
+        currentOnCameraRequestHandled(request.id)
     }
 
     LaunchedEffect(style, locationEnabled) {
@@ -138,7 +228,6 @@ fun LisboraMap(
         if (locationEnabled) m.enableLocation(context, s)
     }
 
-    val density = LocalDensity.current
     LaunchedEffect(map, contentPadding) {
         val m = map ?: return@LaunchedEffect
         with(density) {

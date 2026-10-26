@@ -1,0 +1,50 @@
+{
+  "formatVersion": 1,
+  "dataVersion": "20261025T2344Z",
+  "bbox": "-9.3,38.655,-9.05,38.83",
+  "license": "ODbL (base de dados derivada do OpenStreetMap)",
+  "attribution": "© OpenStreetMap contributors (ODbL)",
+  "sources": {
+    "osm": {
+      "source": "https://download.geofabrik.de/europe/portugal-latest.osm.pbf",
+      "dataDate": "2026-10-24T20:20:51Z"
+    }
+  },
+  "stats": {
+    "entries": 78267,
+    "tokens": 17763,
+    "byCategory": {
+      "STREET": 13446,
+      "ADDRESS": 38082,
+      "LOCALITY": 104,
+      "NEIGHBOURHOOD": 522,
+      "METRO_STATION": 50,
+      "TRAIN_STATION": 81,
+      "FERRY_TERMINAL": 18,
+      "BUS_STATION": 7,
+      "BIKE_SHARE": 205,
+      "BIKE_SHOP": 45,
+      "VIEWPOINT": 61,
+      "PARK": 548,
+      "BEACH": 23,
+      "MUSEUM": 129,
+      "MONUMENT": 714,
+      "ATTRACTION": 220,
+      "PLACE_OF_WORSHIP": 393,
+      "UNIVERSITY": 77,
+      "SCHOOL": 984,
+      "HOSPITAL": 47,
+      "HEALTH": 998,
+      "LIBRARY": 102,
+      "CULTURE": 220,
+      "SPORTS": 172,
+      "MARKET": 86,
+      "SHOPPING": 547,
+      "SHOP": 7707,
+      "FOOD": 5976,
+      "HOTEL": 703,
+      "PUBLIC_SERVICE": 624,
+      "OTHER": 5376
+    }
+  }
+}

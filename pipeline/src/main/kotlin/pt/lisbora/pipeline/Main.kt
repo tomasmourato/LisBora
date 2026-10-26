@@ -10,6 +10,9 @@ import pt.lisbora.pipeline.http.JdkHttpGet
 import pt.lisbora.pipeline.osm.OsmExtract
 import pt.lisbora.pipeline.qa.GoldenConfig
 import pt.lisbora.pipeline.qa.GoldenRoutesCommand
+import pt.lisbora.pipeline.search.BuildSearchCommand
+import pt.lisbora.pipeline.search.GoldenSearchConfig
+import pt.lisbora.pipeline.search.SearchOptions
 import pt.lisbora.routing.graph.GraphFormat
 import java.io.PrintStream
 import java.nio.file.Path
@@ -36,6 +39,10 @@ internal val USAGE = """
       golden-routes [--graph FICHEIRO] [--detalhe sim]
                               Verifica as rotas de referência (${GoldenConfig.DEFAULT_FILE}).
                               O build guarda sempre o grafo candidato em $WORK_DIR/${BuildGraphCommand.CANDIDATE_FILE}.
+      search [--out DIR] [--osm FICHEIRO] [--refresh-osm sim] [--mostrar TEXTO]
+                              Constrói o índice de pesquisa offline (ruas, moradas, locais) a partir do OSM.
+                              Só escreve se as pesquisas de referência (${GoldenSearchConfig.DEFAULT_FILE}) passarem.
+                              --mostrar lista as etiquetas OSM dos elementos com esse texto no nome.
 
     Opções:
       --out DIR    Pasta do pacote de dados (por omissão: $DEFAULT_PACK_DIR).
@@ -45,7 +52,7 @@ internal val USAGE = """
       --dem-zoom   Nível dos mosaicos de elevação Mapterhorn (por omissão: ${TerrariumDem.DEFAULT_ZOOM}).
 
     Previstos:
-      POIs e índice de pesquisa (Fases 3 e 4).
+      Camada de POIs do Descobrir (Fase 4).
 """.trimIndent()
 
 fun main(args: Array<String>) {
@@ -81,6 +88,16 @@ internal fun run(args: List<String>, out: PrintStream): Int {
                 demZoom = options["dem-zoom"]?.toIntOrNull() ?: TerrariumDem.DEFAULT_ZOOM,
                 workDir = Path(WORK_DIR),
                 goldenFile = Path(GoldenConfig.DEFAULT_FILE),
+            ),
+        )
+        "search" -> BuildSearchCommand(JdkHttpGet(), out).run(
+            SearchOptions(
+                packDir = packDir,
+                osmFile = Path(options["osm"] ?: OsmExtract.DEFAULT_FILE),
+                refreshOsm = options["refresh-osm"] == "sim",
+                workDir = Path(WORK_DIR),
+                goldenFile = Path(GoldenSearchConfig.DEFAULT_FILE),
+                showName = options["mostrar"],
             ),
         )
         "golden-routes" -> GoldenRoutesCommand(out).run(

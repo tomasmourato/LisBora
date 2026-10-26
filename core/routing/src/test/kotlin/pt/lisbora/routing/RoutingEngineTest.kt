@@ -12,7 +12,10 @@ import pt.lisbora.routing.graph.RoadKind
 import pt.lisbora.routing.graph.Snap
 import pt.lisbora.routing.graph.SurfaceKind
 import pt.lisbora.routing.graph.TravelMode
+import pt.lisbora.routing.eta.BikeType
+import pt.lisbora.routing.eta.RiderProfile
 import pt.lisbora.routing.weighting.RoutingPreferences
+import pt.lisbora.routing.weighting.TripPurpose
 import kotlin.random.Random
 
 class RoutingEngineTest {
@@ -163,9 +166,17 @@ class RoutingEngineTest {
         assertEquals(12.0, direct.maxGradePercent, 0.5)
         assertEquals(36.0, direct.ascentM, 0.5)
 
-        val limited = engine.success(g.at(0.0, 0.0), g.at(300.0, 0.0), RoutingPreferences(maxGradePercent = 8.0))
+        val eightPercent = RoutingPreferences(maxGradePercent = 8.0)
+        val limited = engine.success(g.at(0.0, 0.0), g.at(300.0, 0.0), eightPercent)
         assertEquals(gentle, limited.edges())
         assertTrue(limited.maxGradePercent < 8.0)
+        // The steep street is cheap enough to be an alternative, but not above the rider's limit.
+        val withAlternatives = engine.route(g.at(0.0, 0.0), g.at(300.0, 0.0), eightPercent, maxAlternatives = 2)
+        check(withAlternatives is RouteResult.Success)
+        assertTrue(withAlternatives.alternatives.none { steep in it.edges() })
+        val unlimited = engine.route(g.at(0.0, 0.0), g.at(300.0, 0.0), defaults, maxAlternatives = 2)
+        check(unlimited is RouteResult.Success)
+        assertEquals(listOf(steep), unlimited.route.edges())
     }
 
     @Test
@@ -247,6 +258,76 @@ class RoutingEngineTest {
         route.legs.zipWithNext { first, second -> assertTrue(second.firstPoint >= first.firstPoint) }
     }
 
+    @Test
+    fun `offers clearly different alternatives, cheapest first`() {
+        val g = TestGraphBuilder()
+        val west = g.node(0.0, 0.0)
+        val east = g.node(2000.0, 0.0)
+        val startStub = g.edge(g.node(-200.0, 0.0), west)
+        val endStub = g.edge(east, g.node(2200.0, 0.0))
+        // Three parallel streets between the same two junctions, each a bit longer than the previous one.
+        val streets = listOf(0.0, 200.0, 400.0).map { offset ->
+            val a = g.node(200.0, offset)
+            val b = g.node(1800.0, offset)
+            listOf(startStub, g.edge(west, a), g.edge(a, b), g.edge(b, east), endStub)
+        }
+        val engine = RoutingEngine(g.build())
+
+        val result = engine.route(g.at(-100.0, -10.0), g.at(2100.0, -10.0), defaults, maxAlternatives = 2)
+        check(result is RouteResult.Success) { "expected routes, got $result" }
+        assertEquals(streets[0], result.route.edges())
+        assertEquals(listOf(streets[1], streets[2]), result.alternatives.map { it.edges() })
+        val routes = result.routes
+        routes.zipWithNext { a, b -> assertTrue(a.cost <= b.cost) }
+        for (a in routes) for (b in routes) if (a !== b) assertTrue(RoutingEngine.overlap(a, b) <= RoutingEngine.MAX_ALTERNATIVE_OVERLAP)
+    }
+
+    @Test
+    fun `skips alternatives that are much longer than the best route`() {
+        val g = TestGraphBuilder()
+        val a = g.node(0.0, 0.0)
+        val b = g.node(1000.0, 0.0)
+        val direct = g.edge(a, b)
+        g.edge(a, b, pillars = listOf(Triple(500.0, 1500.0, 0.0)))
+        val engine = RoutingEngine(g.build())
+
+        val result = engine.route(g.at(0.0, -10.0), g.at(1000.0, -10.0), defaults, maxAlternatives = 2)
+        check(result is RouteResult.Success)
+        assertEquals(listOf(direct), result.route.edges())
+        assertTrue(result.alternatives.isEmpty())
+    }
+
+    @Test
+    fun `overlap is the shared share of the combined length`() {
+        val g = TestGraphBuilder()
+        val nodes = (0..3).map { g.node(it * 100.0, 0.0) }
+        val detour = g.node(150.0, 100.0)
+        val e01 = g.edge(nodes[0], nodes[1]); g.edge(nodes[1], nodes[2]); g.edge(nodes[2], nodes[3])
+        g.edge(nodes[1], detour); g.edge(detour, nodes[2])
+        val engine = RoutingEngine(g.build())
+        val straight = engine.success(g.at(0.0, 0.0), g.at(300.0, 0.0))
+        assertEquals(1.0, RoutingEngine.overlap(straight, straight), 1e-9)
+        val first = straight.legs.single { it.edge == e01 }
+        val other = straight.copy(legs = listOf(first), distanceM = first.lengthM)
+        assertEquals(first.lengthM / straight.distanceM, RoutingEngine.overlap(straight, other), 1e-9)
+        assertEquals(1.0 / 3, RoutingEngine.overlap(straight, other), 1e-3)
+    }
+
+    @Test
+    fun `legs know where they start along the route`() {
+        val g = TestGraphBuilder()
+        val nodes = (0..3).map { g.node(it * 250.0, 0.0) }
+        nodes.zipWithNext { u, v -> g.edge(u, v) }
+        val engine = RoutingEngine(g.build())
+
+        val route = engine.success(g.at(50.0, 0.0), g.at(700.0, 0.0))
+        assertEquals(0.0, route.legs.first().startM, 1e-9)
+        route.legs.zipWithNext { a, b -> assertEquals(a.endM, b.startM, 0.5) }
+        assertEquals(route.distanceM, route.legs.last().endM, 0.5)
+        assertEquals(route.points.size, route.distances.size)
+        assertEquals(route.distanceM, route.distances.last(), 0.5)
+    }
+
     @ParameterizedTest
     @ValueSource(ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])
     fun `A star finds the same cost as Dijkstra on random graphs`(seed: Int) {
@@ -275,7 +356,13 @@ class RoutingEngineTest {
         }
         val graph = g.build()
         val engine = RoutingEngine(graph)
-        val preferences = RoutingPreferences(maxGradePercent = 6.0)
+        // Vary the preferences too: the heuristic's bound depends on them.
+        val preferences = RoutingPreferences(
+            rider = RiderProfile(bike = BikeType.entries[seed % BikeType.entries.size]),
+            purpose = TripPurpose.entries[seed % TripPurpose.entries.size],
+            maxGradePercent = 6.0,
+            preferSegregated = seed % 2 == 0,
+        )
         repeat(10) {
             val from = engine.snap(g.at(random.nextDouble(0.0, 1300.0), random.nextDouble(0.0, 1300.0)), preferences) ?: return@repeat
             val to = engine.snap(g.at(random.nextDouble(0.0, 1300.0), random.nextDouble(0.0, 1300.0)), preferences) ?: return@repeat

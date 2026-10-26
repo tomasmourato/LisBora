@@ -4,9 +4,15 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import pt.lisbora.data.datapack.AssetSource
 import pt.lisbora.data.datapack.CycleNetworkMeta
 import pt.lisbora.data.datapack.DataPackInstaller
+import pt.lisbora.data.datapack.DataPackStore
+import pt.lisbora.data.datapack.InstalledDataPack
 import pt.lisbora.di.IoDispatcher
 import pt.lisbora.feature.map.CycleNetworkPalette
 import pt.lisbora.feature.map.MapStyleComposer
@@ -29,7 +35,7 @@ interface MapDataRepository {
 /** Installs the data pack bundled in the APK and composes the light/dark styles over it. Loaded once. */
 @Singleton
 class BundledMapDataRepository @Inject constructor(
-    private val installer: DataPackInstaller,
+    private val packs: DataPackStore,
     private val assets: AssetSource,
     @param:IoDispatcher private val io: CoroutineDispatcher,
 ) : MapDataRepository {
@@ -38,17 +44,18 @@ class BundledMapDataRepository @Inject constructor(
     private var cached: MapData? = null
 
     override suspend fun load(): MapData = mutex.withLock {
-        cached ?: withContext(io) { build() }.also { cached = it }
+        cached ?: packs.pack().let { pack -> withContext(io) { build(pack) } }.also { cached = it }
     }
 
-    private fun build(): MapData {
-        val pack = installer.install()
+    private fun build(pack: InstalledDataPack): MapData {
         val cycleNetwork = pack.file(DataPackInstaller.CYCLE_NETWORK_FILE)
             ?: throw IOException("Data pack has no ${DataPackInstaller.CYCLE_NETWORK_FILE}")
         val meta = pack.file(DataPackInstaller.CYCLE_NETWORK_META_FILE)
             ?.let { CycleNetworkMeta.parse(it.readText()) }
             ?: CycleNetworkMeta(attribution = "", sourceLastEdit = null, lengthKmByClass = emptyMap())
         val basemap = pack.file(DataPackInstaller.BASEMAP_FILE)
+        val elevationAttribution = pack.file(DataPackInstaller.GRAPH_META_FILE)
+            ?.let { runCatching { GraphMeta.elevationAttribution(it.readText()) }.getOrNull() }
 
         fun style(asset: String, palette: CycleNetworkPalette) = MapStyleComposer.compose(
             baseStyle = assets.open(asset).bufferedReader().use { it.readText() },
@@ -56,6 +63,7 @@ class BundledMapDataRepository @Inject constructor(
             cycleNetworkPath = cycleNetwork.absolutePath,
             cycleAttribution = meta.attribution,
             palette = palette,
+            routeAttribution = elevationAttribution,
         )
         return MapData(
             lightStyle = style("map/style-light.json", CycleNetworkPalette.Light),
@@ -64,4 +72,12 @@ class BundledMapDataRepository @Inject constructor(
             hasBasemap = basemap != null,
         )
     }
+}
+
+/** Reads what the map needs from `graph.meta.json`, written by the pipeline's `build`. */
+internal object GraphMeta {
+    /** Credit for the elevation data behind the route profiles (Mapterhorn, DGT, Copernicus). */
+    fun elevationAttribution(json: String): String? =
+        Json.parseToJsonElement(json).jsonObject["sources"]?.jsonObject
+            ?.get("elevation")?.jsonObject?.get("attribution")?.jsonPrimitive?.contentOrNull
 }

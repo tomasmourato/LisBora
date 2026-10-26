@@ -20,6 +20,26 @@
       "path": "ciclovias.meta.json",
       "size": 774,
       "sha256": "3a9e6f4aefcdf82eb34913113b6a98b40579ce9ce34020b989445e0e876e93a9"
+    },
+    {
+      "path": "graph.lbg",
+      "size": 8556905,
+      "sha256": "8925a6c498d873b499ea3f5fa0676d358011a78ab264b9fcf5c5aa65d05b4679"
+    },
+    {
+      "path": "graph.meta.json",
+      "size": 1778,
+      "sha256": "e44a2bd849604e2ea801f0d64fad8c9298f546a0130ebef1f69ffee782e529d2"
+    },
+    {
+      "path": "search.lbs",
+      "size": 5050459,
+      "sha256": "7d7c697aed008d757946e6b160859387bb811a7e47f5150976cfccec1e1fbe12"
+    },
+    {
+      "path": "search.meta.json",
+      "size": 1182,
+      "sha256": "27c40c0bdea421fe250afc38f2e9949f31c41fce3ae1a48ff27fba67301b68ee"
     }
   ]
 }

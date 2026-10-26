@@ -1,6 +1,8 @@
 package pt.lisbora.pipeline.qa
 
 import pt.lisbora.routing.Route
+import pt.lisbora.routing.RouteResult
+import pt.lisbora.routing.RoutingEngine
 import pt.lisbora.routing.graph.GraphFormat
 import pt.lisbora.routing.graph.RoutingGraph
 import java.io.PrintStream
@@ -23,6 +25,7 @@ class GoldenRoutesCommand(private val out: PrintStream) {
             "(carregado em ${(System.nanoTime() - started) / 1_000_000} ms)")
         val config = GoldenConfig.parse(configFile.readText())
         val runner = GoldenRouteRunner(graph)
+        val engine = RoutingEngine(graph)
         val failures = runner.graphFailures(config).onEach { out.println("FALHA $it") }.size
         val results = runner.run(config)
         results.forEach { r ->
@@ -33,9 +36,22 @@ class GoldenRoutesCommand(private val out: PrintStream) {
                 )
             } ?: "sem rota"
             out.println("${if (r.passed) "OK   " else "FALHA"} ${r.route.name}: $summary ${r.failures.joinToString("; ")}")
+            if (route != null) printAlternatives(engine, r.route)
             if (detailed && route != null) printLegs(graph, route)
         }
         return if (failures == 0 && results.all { it.passed }) 0 else 3
+    }
+
+    /** The alternatives the app would offer for the same trip, with the time the search took. */
+    private fun printAlternatives(engine: RoutingEngine, golden: GoldenRoute) {
+        val started = System.nanoTime()
+        val result = engine.route(golden.from, golden.to, golden.preferences, maxAlternatives = 2)
+        val millis = (System.nanoTime() - started) / 1_000_000
+        val alternatives = (result as? RouteResult.Success)?.alternatives.orEmpty()
+        val summary = alternatives.joinToString("; ") {
+            "%.1f km, %.0f min, %.0f%% infra, +%.0f m".format(it.distanceM / 1000, it.durationS / 60, it.infraShare * 100, it.ascentM)
+        }
+        out.println("      alternativas (${alternatives.size}, $millis ms): ${summary.ifEmpty { "nenhuma" }}")
     }
 
     /** One line per leg: name, way type, infrastructure, mode, length, elevations and steepest grade. */

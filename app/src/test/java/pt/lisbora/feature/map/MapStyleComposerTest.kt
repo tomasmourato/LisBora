@@ -44,11 +44,24 @@ class MapStyleComposerTest {
     }
 
     @Test
-    fun `inserts cycle layers above the basemap and below the first label layer`() {
+    fun `inserts cycle and route layers above the basemap and below the first label layer`() {
         val ids = compose("/data/pack/basemap.pmtiles").layerIds()
         assertEquals(listOf("background", "roads", CycleNetworkLayers.CASING, CycleNetworkLayers.SELECTION), ids.take(4))
         assertEquals(CycleNetworkLayers.classLayers, ids.subList(4, 4 + CycleNetworkLayers.classLayers.size))
-        assertEquals("labels", ids.last())
+        val routes = listOf(RouteLayers.ALT_CASING, RouteLayers.ALT, RouteLayers.SELECTED_CASING, RouteLayers.SELECTED, RouteLayers.SELECTED_DASHED)
+        val afterCycle = 4 + CycleNetworkLayers.classLayers.size
+        assertEquals(routes, ids.subList(afterCycle, afterCycle + routes.size))
+        // Labels stay above the routes; the trip's markers go on top of everything.
+        assertEquals(listOf("labels", RouteLayers.MARKERS), ids.takeLast(2))
+    }
+
+    @Test
+    fun `route sources start empty and credit the graph's sources`() {
+        val sources = Json.parseToJsonElement(
+            MapStyleComposer.compose(baseStyle, null, "/c.geojson", "CML", CycleNetworkPalette.Light, routeAttribution = "Elevação: Mapterhorn"),
+        ).jsonObject.getValue("sources").jsonObject
+        assertEquals("Elevação: Mapterhorn", sources.getValue(RouteLayers.SOURCE).jsonObject["attribution"]!!.jsonPrimitive.content)
+        assertEquals(0, sources.getValue(RouteLayers.MARKER_SOURCE).jsonObject["data"]!!.jsonObject["features"]!!.jsonArray.size)
     }
 
     @Test

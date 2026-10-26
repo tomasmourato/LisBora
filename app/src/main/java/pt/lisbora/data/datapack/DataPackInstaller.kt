@@ -4,6 +4,8 @@ import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import pt.lisbora.routing.graph.GraphFormat
+import pt.lisbora.routing.search.SearchIndexFormat
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -17,7 +19,7 @@ fun interface AssetSource {
     fun open(path: String): InputStream
 }
 
-/** A data pack installed on disk, ready to be read by the map and (later) the router. */
+/** A data pack installed on disk, ready to be read by the map, the router and the search. */
 data class InstalledDataPack(val dir: File, val manifest: DataPackManifest) {
     /** The installed file for [path], or null when the pack does not contain it. */
     fun file(path: String): File? = manifest.entry(path)?.let { File(dir, it.path) }?.takeIf { it.isFile }
@@ -107,5 +109,8 @@ class DataPackInstaller(
         const val BASEMAP_FILE = "basemap.pmtiles"
         const val CYCLE_NETWORK_FILE = "ciclovias.geojson"
         const val CYCLE_NETWORK_META_FILE = "ciclovias.meta.json"
+        const val GRAPH_FILE = GraphFormat.FILE_NAME
+        const val GRAPH_META_FILE = "graph.meta.json"
+        const val SEARCH_FILE = SearchIndexFormat.FILE_NAME
     }
 }

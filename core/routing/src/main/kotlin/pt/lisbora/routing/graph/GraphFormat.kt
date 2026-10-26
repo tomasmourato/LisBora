@@ -1,6 +1,13 @@
 package pt.lisbora.routing.graph
 
 import pt.lisbora.routing.geo.GeoBounds
+import pt.lisbora.routing.io.LittleEndianWriter
+import pt.lisbora.routing.io.count
+import pt.lisbora.routing.io.floats
+import pt.lisbora.routing.io.ints
+import pt.lisbora.routing.io.longs
+import pt.lisbora.routing.io.shorts
+import pt.lisbora.routing.io.string
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -94,56 +101,6 @@ object GraphFormat {
             throw IOException("Graph file is truncated", e)
         } catch (e: IllegalArgumentException) {
             throw IOException("Graph file is inconsistent: ${e.message}", e)
-        }
-    }
-
-    private fun ByteBuffer.count(): Int = int.also { if (it < 0) throw IOException("Negative count in graph file") }
-
-    private fun ByteBuffer.string(): String {
-        val length = count()
-        val bytes = ByteArray(length)
-        get(bytes)
-        return bytes.decodeToString()
-    }
-
-    private fun ByteBuffer.ints(size: Int) = IntArray(size).also { asIntBuffer().get(it); advance(size * 4) }
-    private fun ByteBuffer.shorts(size: Int) = ShortArray(size).also { asShortBuffer().get(it); advance(size * 2) }
-    private fun ByteBuffer.floats(size: Int) = FloatArray(size).also { asFloatBuffer().get(it); advance(size * 4) }
-    private fun ByteBuffer.longs(size: Int) = LongArray(size).also { asLongBuffer().get(it); advance(size * 8) }
-
-    private fun ByteBuffer.advance(bytes: Int) {
-        position(position() + bytes)
-    }
-
-    /** Buffered little-endian writer (DataOutputStream is big-endian). */
-    private class LittleEndianWriter(private val output: OutputStream) {
-        private val buffer = ByteBuffer.allocate(1 shl 16).order(ByteOrder.LITTLE_ENDIAN)
-
-        private fun ensure(bytes: Int) {
-            if (buffer.remaining() < bytes) drain()
-        }
-
-        private fun drain() {
-            output.write(buffer.array(), 0, buffer.position())
-            buffer.clear()
-        }
-
-        fun int(value: Int) { ensure(4); buffer.putInt(value) }
-        fun double(value: Double) { ensure(8); buffer.putDouble(value) }
-        fun ints(values: IntArray) = values.forEach(::int)
-        fun shorts(values: ShortArray) = values.forEach { ensure(2); buffer.putShort(it) }
-        fun floats(values: FloatArray) = values.forEach { ensure(4); buffer.putFloat(it) }
-        fun longs(values: LongArray) = values.forEach { ensure(8); buffer.putLong(it) }
-
-        fun string(value: String) {
-            val bytes = value.encodeToByteArray()
-            int(bytes.size)
-            for (b in bytes) { ensure(1); buffer.put(b) }
-        }
-
-        fun flush() {
-            drain()
-            output.flush()
         }
     }
 }

@@ -1,0 +1,17 @@
+{
+  "near": [38.7223, -9.1393],
+  "searches": [
+    { "query": "rua augusta", "expectName": "Rua Augusta", "at": [38.7104, -9.1372], "radiusM": 400, "maxRank": 1 },
+    { "query": "praça do comércio", "expectName": "Praça do Comércio", "at": [38.7077, -9.1364], "radiusM": 400, "maxRank": 1 },
+    { "query": "gulbenkian", "expectName": "Gulbenkian", "at": [38.7372, -9.1540], "radiusM": 600, "maxRank": 3 },
+    { "query": "oceanario", "expectName": "Oceanário", "at": [38.7635, -9.0937], "radiusM": 400, "maxRank": 1 },
+    { "query": "torre de belem", "expectName": "Torre de Belém", "at": [38.6916, -9.2160], "radiusM": 300, "maxRank": 1 },
+    { "query": "cais do sodre", "expectName": "Cais do Sodré", "at": [38.7060, -9.1450], "radiusM": 600, "maxRank": 1 },
+    { "query": "alfama", "expectName": "Alfama", "at": [38.7115, -9.1300], "radiusM": 800, "maxRank": 1 },
+    { "query": "lx factory", "expectName": "LX Factory", "at": [38.7034, -9.1786], "radiusM": 400, "maxRank": 3 },
+    { "query": "gare do oriente", "expectName": "Oriente", "at": [38.7678, -9.0990], "radiusM": 400, "maxRank": 1 },
+    { "query": "cacilhas", "expectName": "Cacilhas", "at": [38.6878, -9.1470], "radiusM": 1000, "maxRank": 1 },
+    { "query": "av almirante reis", "expectName": "Avenida Almirante Reis", "at": [38.7300, -9.1350], "radiusM": 1500, "maxRank": 1 },
+    { "query": "jardim da estrela", "expectName": "Estrela", "at": [38.7133, -9.1597], "radiusM": 400, "maxRank": 3 }
+  ]
+}

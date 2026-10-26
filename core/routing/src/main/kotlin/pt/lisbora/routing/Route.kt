@@ -19,7 +19,10 @@ data class RouteLeg(
     val timeS: Double,
     /** Index in [Route.points] where this leg starts. */
     val firstPoint: Int,
+    /** Distance along the route where this leg starts, in metres (same scale as [Route.distances]). */
+    val startM: Double,
 ) {
+    val endM: Double get() = startM + lengthM
     val mode: TravelMode get() = flags.mode(reverse)
     val infra: EdgeInfra get() = flags.infra
 }
@@ -29,6 +32,8 @@ data class Route(
     val points: List<GeoPoint>,
     /** Elevation in metres of each of [points]. */
     val elevations: List<Double>,
+    /** Distance along the route of each of [points], in metres. */
+    val distances: List<Double>,
     val legs: List<RouteLeg>,
     val distanceM: Double,
     val durationS: Double,
@@ -36,7 +41,7 @@ data class Route(
     val descentM: Double,
     /** Steepest uphill grade along the route, in percent, measured over stretches of at least 30 m. */
     val maxGradePercent: Double,
-    /** Internal cost the router minimised (seconds weighted by comfort factors). */
+    /** Internal cost of the route (seconds weighted by comfort factors), without any alternative-search penalties. */
     val cost: Double,
     /** Search effort, for diagnostics. */
     val settledStates: Int,
@@ -54,7 +59,10 @@ data class Route(
 }
 
 sealed interface RouteResult {
-    data class Success(val route: Route) : RouteResult
+    /** The best [route], plus clearly different [alternatives] (cheapest first) when they were asked for. */
+    data class Success(val route: Route, val alternatives: List<Route> = emptyList()) : RouteResult {
+        val routes: List<Route> get() = listOf(route) + alternatives
+    }
 
     data class Failure(val reason: Reason) : RouteResult
 

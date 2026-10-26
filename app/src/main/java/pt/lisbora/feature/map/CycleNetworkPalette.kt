@@ -17,7 +17,7 @@ data class CycleNetworkPalette(
 
     fun style(infraClass: CycleInfraClass): ClassStyle = classes.getValue(infraClass)
 
-    fun composeColor(infraClass: CycleInfraClass): Color = hexToColor(style(infraClass).color)
+    fun composeColor(infraClass: CycleInfraClass): Color = hexColor(style(infraClass).color)
 
     companion object {
         val Light = CycleNetworkPalette(
@@ -43,7 +43,8 @@ data class CycleNetworkPalette(
             casing = "#101412",
             selection = "#C4B5FD",
         )
-
-        private fun hexToColor(hex: String): Color = Color(("FF" + hex.removePrefix("#")).toLong(16))
     }
 }
+
+/** A Compose colour from "#RRGGBB", the format the map style uses. */
+fun hexColor(hex: String): Color = Color(("FF" + hex.removePrefix("#")).toLong(16))
