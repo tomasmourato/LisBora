@@ -47,10 +47,15 @@ class TestGraphBuilder(private val origin: GeoPoint = GeoPoint(38.70, -9.15)) {
         signals: Boolean = false,
         name: String? = null,
         pillars: List<Triple<Double, Double, Double>> = emptyList(),
+        riverside: Boolean = false,
+        green: Boolean = false,
+        viewpoint: Boolean = false,
+        lisbon: Boolean = false,
     ): Int {
         val flags = EdgeFlags.of(
             forward = forward, backward = backward, infra = infra, road = road, surface = surface,
-            tram = tram, trafficSignals = signals, stress = stress,
+            tram = tram, trafficSignals = signals, stress = stress, riverside = riverside, green = green, viewpoint = viewpoint,
+            lisbon = lisbon,
         )
         edges += Edge(base, adj, flags, name, pillars.map { (x, y, ele) -> point(x, y, ele) })
         return edges.size - 1

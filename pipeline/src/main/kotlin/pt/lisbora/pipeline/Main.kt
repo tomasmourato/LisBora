@@ -8,11 +8,15 @@ import pt.lisbora.pipeline.graph.BuildGraphCommand
 import pt.lisbora.pipeline.graph.BuildOptions
 import pt.lisbora.pipeline.http.JdkHttpGet
 import pt.lisbora.pipeline.osm.OsmExtract
+import pt.lisbora.pipeline.qa.DiscoverCommand
 import pt.lisbora.pipeline.qa.GoldenConfig
+import pt.lisbora.pipeline.qa.GoldenDiscoveries
 import pt.lisbora.pipeline.qa.GoldenRoutesCommand
 import pt.lisbora.pipeline.search.BuildSearchCommand
 import pt.lisbora.pipeline.search.GoldenSearchConfig
+import pt.lisbora.pipeline.search.PoiCatalog
 import pt.lisbora.pipeline.search.SearchOptions
+import pt.lisbora.routing.discover.DiscoveryEngine
 import pt.lisbora.routing.graph.GraphFormat
 import java.io.PrintStream
 import java.nio.file.Path
@@ -40,9 +44,14 @@ internal val USAGE = """
                               Verifica as rotas de referência (${GoldenConfig.DEFAULT_FILE}).
                               O build guarda sempre o grafo candidato em $WORK_DIR/${BuildGraphCommand.CANDIDATE_FILE}.
       search [--out DIR] [--osm FICHEIRO] [--refresh-osm sim] [--mostrar TEXTO]
-                              Constrói o índice de pesquisa offline (ruas, moradas, locais) a partir do OSM.
+                              Constrói o índice de pesquisa offline (ruas, moradas, locais) e os pontos de
+                              interesse do mapa e do Descobrir (${PoiCatalog.FILE_NAME}) a partir do OSM.
                               Só escreve se as pesquisas de referência (${GoldenSearchConfig.DEFAULT_FILE}) passarem.
                               --mostrar lista as etiquetas OSM dos elementos com esse texto no nome.
+      discover [--graph FICHEIRO] [--pois FICHEIRO] [--amostra N] [--fios N] [--heuristica X] [--detalhe sim]
+                              Corre as descobertas de referência (${GoldenDiscoveries.DEFAULT_FILE}) com tempos
+                              de cálculo; --amostra N acrescenta N descobertas aleatórias (sempre as mesmas);
+                              --detalhe sim mostra todas as candidatas.
 
     Opções:
       --out DIR    Pasta do pacote de dados (por omissão: $DEFAULT_PACK_DIR).
@@ -51,8 +60,6 @@ internal val USAGE = """
       --cml        Rede da CML usada pelo mapa (por omissão: $BUNDLED_PACK_DIR/${FetchCmlCommand.GEOJSON_FILE}).
       --dem-zoom   Nível dos mosaicos de elevação Mapterhorn (por omissão: ${TerrariumDem.DEFAULT_ZOOM}).
 
-    Previstos:
-      Camada de POIs do Descobrir (Fase 4).
 """.trimIndent()
 
 fun main(args: Array<String>) {
@@ -105,6 +112,15 @@ internal fun run(args: List<String>, out: PrintStream): Int {
             configFile = Path(GoldenConfig.DEFAULT_FILE),
             detailed = options["detalhe"] == "sim",
             sample = options["amostra"]?.toIntOrNull() ?: 0,
+        )
+        "discover" -> DiscoverCommand(out).run(
+            graphFile = Path(options["graph"] ?: "$DEFAULT_PACK_DIR/${GraphFormat.FILE_NAME}"),
+            poisFile = Path(options["pois"] ?: "$DEFAULT_PACK_DIR/${PoiCatalog.FILE_NAME}"),
+            configFile = Path(GoldenDiscoveries.DEFAULT_FILE),
+            sample = options["amostra"]?.toIntOrNull() ?: 0,
+            threads = options["fios"]?.toIntOrNull() ?: DiscoverCommand.DEFAULT_THREADS,
+            heuristicWeight = options["heuristica"]?.toDoubleOrNull() ?: DiscoveryEngine.DEFAULT_HEURISTIC_WEIGHT,
+            detailed = options["detalhe"] == "sim",
         )
         else -> {
             out.println("Comando desconhecido: $command")

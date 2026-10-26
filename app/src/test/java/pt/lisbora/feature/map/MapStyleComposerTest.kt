@@ -24,13 +24,14 @@ class MapStyleComposerTest {
          ]}
     """.trimIndent()
 
-    private fun compose(basemapPath: String?): JsonObject = Json.parseToJsonElement(
+    private fun compose(basemapPath: String?, poisPath: String? = null): JsonObject = Json.parseToJsonElement(
         MapStyleComposer.compose(
             baseStyle = baseStyle,
             basemapPath = basemapPath,
             cycleNetworkPath = "/data/pack/ciclovias.geojson",
             cycleAttribution = "Rede Ciclável © CML",
             palette = CycleNetworkPalette.Light,
+            poisPath = poisPath,
         ),
     ).jsonObject
 
@@ -52,7 +53,7 @@ class MapStyleComposerTest {
         val afterCycle = 4 + CycleNetworkLayers.classLayers.size
         assertEquals(routes, ids.subList(afterCycle, afterCycle + routes.size))
         // Labels stay above the routes; the trip's markers go on top of everything.
-        assertEquals(listOf("labels", RouteLayers.MARKERS), ids.takeLast(2))
+        assertEquals(listOf("labels", RouteLayers.MARKERS, RouteLayers.MARKER_LABELS), ids.takeLast(3))
     }
 
     @Test
@@ -90,5 +91,31 @@ class MapStyleComposerTest {
         assertTrue("line-dasharray" in trail["paint"]!!.jsonObject)
         val segregated = layers.getValue(CycleNetworkLayers.classLayer(CycleInfraClass.SEGREGATED_TRACK))
         assertFalse("line-dasharray" in segregated["paint"]!!.jsonObject)
+    }
+
+    @Test
+    fun `point-of-interest layers start hidden over the cycle network, names above the basemap labels`() {
+        val style = compose("/data/pack/basemap.pmtiles", poisPath = "/data/pack/pois.geojson")
+        val source = style["sources"]!!.jsonObject[PoiLayer.SOURCE]!!.jsonObject
+        assertEquals("file:///data/pack/pois.geojson", source["data"]!!.jsonPrimitive.content)
+        val ids = style.layerIds()
+        val poiIds = PoiLayer.entries.map { it.layerId }
+        val firstPoi = ids.indexOf(poiIds.first())
+        assertEquals(poiIds, ids.subList(firstPoi, firstPoi + poiIds.size))
+        assertTrue(firstPoi > ids.indexOf(CycleNetworkLayers.classLayers.last()) && firstPoi < ids.indexOf(RouteLayers.ALT_CASING))
+        assertTrue(ids.indexOf(PoiLayer.PLACES_LABELS) > ids.indexOf("labels"))
+
+        val layers = style["layers"]!!.jsonArray.map { it.jsonObject }.associateBy { it["id"]!!.jsonPrimitive.content }
+        val water = layers.getValue(PoiLayer.DRINKING_WATER.layerId)
+        assertEquals("none", water["layout"]!!.jsonObject["visibility"]!!.jsonPrimitive.content)
+        assertEquals("""["in",["get","kind"],["literal",["drinking_water"]]]""", water["filter"].toString())
+        assertEquals("none", layers.getValue(PoiLayer.PLACES_LABELS)["layout"]!!.jsonObject["visibility"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `without points of interest there is no layer for them`() {
+        val style = compose("/data/pack/basemap.pmtiles")
+        assertNull(style["sources"]!!.jsonObject[PoiLayer.SOURCE])
+        assertTrue(style.layerIds().none { it.startsWith("poi-") })
     }
 }

@@ -2,17 +2,10 @@ package pt.lisbora.data.routing
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import pt.lisbora.data.datapack.DataPackInstaller
-import pt.lisbora.data.datapack.DataPackStore
 import pt.lisbora.di.DefaultDispatcher
 import pt.lisbora.routing.RouteResult
-import pt.lisbora.routing.RoutingEngine
 import pt.lisbora.routing.geo.GeoPoint
-import pt.lisbora.routing.graph.GraphFormat
-import pt.lisbora.routing.graph.RoutingGraph
 import pt.lisbora.routing.weighting.RoutingPreferences
 import java.io.IOException
 import javax.inject.Inject
@@ -42,17 +35,14 @@ interface RoutingRepository {
 }
 
 /**
- * Routes on the phone with the graph from the installed data pack. The graph (~8 MB) is read once
- * and searches run on [compute], away from the main thread.
+ * Routes on the phone with the graph from the installed data pack (see [RoutingEngineStore]).
+ * Searches run on [compute], away from the main thread.
  */
 @Singleton
 class GraphRoutingRepository @Inject constructor(
-    private val packs: DataPackStore,
+    private val engines: RoutingEngineStore,
     @param:DefaultDispatcher private val compute: CoroutineDispatcher,
 ) : RoutingRepository {
-
-    private val mutex = Mutex()
-    private var engine: RoutingEngine? = null
 
     override suspend fun route(
         from: GeoPoint,
@@ -61,7 +51,7 @@ class GraphRoutingRepository @Inject constructor(
         alternatives: Int,
         onBest: suspend (RouteResult.Success) -> Unit,
     ): RouteResult {
-        val engine = engine()
+        val engine = engines.engine()
         val started = System.nanoTime()
         val start = withContext(compute) { engine.snap(from, preferences) }
             ?: return RouteResult.Failure(RouteResult.Reason.START_NOT_ON_NETWORK)
@@ -79,27 +69,14 @@ class GraphRoutingRepository @Inject constructor(
     private fun elapsedMs(since: Long) = (System.nanoTime() - since) / 1_000_000
 
     override suspend fun streetName(point: GeoPoint, maxDistanceM: Double): String? {
-        val engine = engine()
+        val engine = engines.engine()
         return withContext(compute) {
             engine.snap(point, maxDistanceM = maxDistanceM)?.let { engine.graph.name(it.edge) }
         }
     }
 
     override suspend fun warmUp() {
-        engine()
-    }
-
-    private suspend fun engine(): RoutingEngine = mutex.withLock {
-        engine ?: run {
-            val file = packs.pack().file(DataPackInstaller.GRAPH_FILE)
-                ?: throw RoutingUnavailableException("Data pack has no ${DataPackInstaller.GRAPH_FILE}")
-            withContext(compute) {
-                val started = System.nanoTime()
-                RoutingEngine(RoutingGraph(file.inputStream().buffered().use(GraphFormat::read))).also {
-                    Log.i(TAG, "Graph loaded in ${(System.nanoTime() - started) / 1_000_000} ms")
-                }
-            }
-        }.also { engine = it }
+        engines.engine()
     }
 
     private companion object {

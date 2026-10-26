@@ -2,7 +2,7 @@
 
 App Android para andar de bicicleta em Lisboa. Gera rotas que privilegiam a rede ciclável e as ruas calmas, e sugere passeios automáticos para o tempo que tens disponível (lazer, paisagens, rio, desporto, subidas, descidas…).
 
-As rotas são calculadas **no telemóvel**: não há servidor nem contas. O plano completo está em [docs/PLANO.md](docs/PLANO.md).
+As rotas são calculadas **no telemóvel**: não há servidor nem contas. A única ligação à Internet é opcional: no Descobrir com GIRA, a app lê as bicicletas e docas livres das estações (dados da EMEL); sem rede, funciona com as estações do pacote. O plano completo está em [docs/PLANO.md](docs/PLANO.md).
 
 ## Estado
 
@@ -12,7 +12,7 @@ As rotas são calculadas **no telemóvel**: não há servidor nem contas. O plan
 | 1 | Mapa offline e rede ciclável da CML | ✅ |
 | 2 | Grafo e router (JVM) | ✅ |
 | 3 | Planear A→B | ✅ |
-| 4 | Descobrir (rotas automáticas) | — |
+| 4 | Descobrir (rotas automáticas) | ✅ |
 | 5 | Seguir rota | — |
 | 6 | Atualização de dados sem nova versão da app | — |
 | 7 | Polimento | — |
@@ -20,8 +20,8 @@ As rotas são calculadas **no telemóvel**: não há servidor nem contas. O plan
 ## Estrutura
 
 - `app/` — app Android (Kotlin, Jetpack Compose, Material 3, Hilt).
-- `core/routing/` — biblioteca Kotlin/JVM pura partilhada pela app e pelo pipeline (grafo, router, alternativas, perigos, ETA, pesquisa offline).
-- `pipeline/` — ferramenta de linha de comandos que constrói os pacotes de dados (rede ciclável da CML, mapa base, grafo de rotas a partir do OpenStreetMap com o GraphHopper, índice de pesquisa). Não corre no telemóvel.
+- `core/routing/` — biblioteca Kotlin/JVM pura partilhada pela app e pelo pipeline (grafo, router, alternativas, perigos, ETA, Descobrir, pesquisa offline).
+- `pipeline/` — ferramenta de linha de comandos que constrói os pacotes de dados (rede ciclável da CML, mapa base, grafo de rotas a partir do OpenStreetMap com o GraphHopper, índice de pesquisa, pontos de interesse). Não corre no telemóvel.
 
 ## Compilar
 
@@ -41,19 +41,25 @@ Para construir o grafo de rotas (descarrega o extrato OSM de Portugal, ~430 MB, 
 
 O grafo fica em `pipeline/work/datapack/graph.lbg` e o relatório de qualidade em `pipeline/work/qa/report.md`.
 
-Para construir o índice de pesquisa offline (ruas, moradas, locais; usa o mesmo extrato OSM, ~30 s):
+Para construir o índice de pesquisa offline (ruas, moradas, locais) e os pontos de interesse do mapa e do Descobrir (`pois.geojson`); usa o mesmo extrato OSM, ~30 s:
 
 ```bash
 ./gradlew :pipeline:run --args="search"
 ```
 
-A app traz o grafo e o índice no pacote embutido (`app/src/main/assets/datapack`). Para os atualizar, usa `--out app/src/main/assets/datapack` nos dois comandos.
+Para verificar o Descobrir no grafo real (descobertas de referência, com tempos de cálculo):
+
+```bash
+./gradlew :pipeline:run --args="discover"
+```
+
+A app traz o grafo, o índice e os pontos de interesse no pacote embutido (`app/src/main/assets/datapack`). Para os atualizar, usa `--out app/src/main/assets/datapack` em `build` e `search`.
 
 ## Dados e licenças
 
 O código ainda não tem licença: todos os direitos estão reservados. Os dados usados pela app mantêm as licenças próprias:
 
-- **OpenStreetMap** — © contribuidores do OpenStreetMap, [ODbL](https://opendatacommons.org/licenses/odbl/). As bases de dados derivadas (grafo de rotas, índice de pesquisa) são distribuídas sob a ODbL.
+- **OpenStreetMap** — © contribuidores do OpenStreetMap, [ODbL](https://opendatacommons.org/licenses/odbl/). As bases de dados derivadas (grafo de rotas, índice de pesquisa, pontos de interesse) são distribuídas sob a ODbL.
 - **Rede Ciclável de Lisboa** — © Câmara Municipal de Lisboa ([Lisboa Aberta](https://dados.cm-lisboa.pt/dataset/rede-ciclavel)), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Os dados são normalizados e associados ao grafo OSM pela LisBora.
 - **Elevação** — [Mapterhorn](https://mapterhorn.com), com dados da Direção-Geral do Território (LiDAR, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)) e Copernicus GLO-30 (© DLR e.V. 2010-2014 e © Airbus Defence and Space GmbH 2014-2018, fornecido no âmbito do COPERNICUS pela União Europeia e a ESA).
 - **Mapa base** — [Protomaps](https://protomaps.com), com dados © contribuidores do OpenStreetMap. Fontes Noto Sans (SIL Open Font License) e ícones derivados de [tangrams/icons](https://github.com/tangrams/icons) (MIT); ver [app/src/main/assets/map/NOTICE.md](app/src/main/assets/map/NOTICE.md).

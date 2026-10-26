@@ -16,6 +16,7 @@ import pt.lisbora.pipeline.http.JdkHttpGet
 import pt.lisbora.pipeline.osm.GraphHopperImport
 import pt.lisbora.pipeline.osm.OsmExtract
 import pt.lisbora.pipeline.osm.OsmFeatureScan
+import pt.lisbora.pipeline.osm.OsmSceneryScan
 import pt.lisbora.pipeline.qa.GoldenConfig
 import pt.lisbora.pipeline.qa.GoldenRouteRunner
 import pt.lisbora.pipeline.qa.QaInput
@@ -93,6 +94,10 @@ class BuildGraphCommand(
         val conflation = CmlConflation(region, projection).run(cmlLines)
         out.println("CML: %.1f%% dos %.0f km associados".format(conflation.matchedShare * 100, conflation.totalKm))
         val enrichment = EdgeEnrichment(region, projection).apply(features)
+        val scenery = SceneryEnrichment(region, projection).apply(OsmSceneryScan(osm, bounds, out).scan())
+        out.println("Cénico: %.1f km junto ao rio, %.1f km em parques e matas, %d arestas junto a miradouros; %.1f km no concelho de Lisboa".format(
+            scenery.riversideKm, scenery.greenKm, scenery.viewpointEdges, scenery.lisbonKm,
+        ))
 
         val data = GraphExport.toGraphData(region, dataVersion, bounds)
         val graph = RoutingGraph(data)
@@ -113,6 +118,7 @@ class BuildGraphCommand(
             droppedNodes = dropped,
             elevation = elevation,
             enrichment = enrichment,
+            scenery = scenery,
             conflation = conflation,
             minCmlCoverage = MIN_CML_COVERAGE,
             graphFailures = graphFailures,
@@ -122,6 +128,7 @@ class BuildGraphCommand(
         qaDir.resolve("cml-unmatched.geojson").writeText(PrettyJson.encodeCompact(QaReport.unmatchedGeoJson(conflation)))
         qaDir.resolve("contraflow.geojson").writeText(PrettyJson.encodeCompact(QaReport.contraflowGeoJson(conflation)))
         qaDir.resolve("steep.geojson").writeText(PrettyJson.encodeCompact(QaReport.steepGeoJson(graph)))
+        qaDir.resolve("scenery.geojson").writeText(PrettyJson.encodeCompact(QaReport.sceneryGeoJson(graph)))
         qaDir.resolve("routes.geojson").writeText(PrettyJson.encodeCompact(GoldenRouteRunner.toGeoJson(goldenResults)))
         goldenResults.forEach { r ->
             val route = r.computed
@@ -193,6 +200,10 @@ class BuildGraphCommand(
             put("edges", g.edgeCount)
             put("turnRestrictions", g.data.restrictionCount)
             put("cmlMatchedShare", Math.round(qa.conflation.matchedShare * 1000) / 1000.0)
+            put("riversideKm", Math.round(qa.scenery.riversideKm * 10) / 10.0)
+            put("greenKm", Math.round(qa.scenery.greenKm * 10) / 10.0)
+            put("viewpointEdges", qa.scenery.viewpointEdges)
+            put("lisbonKm", Math.round(qa.scenery.lisbonKm * 10) / 10.0)
             putJsonObject("kmByInfra") {
                 EdgeInfra.entries.forEach { infra ->
                     val km = (0 until g.edgeCount).filter { g.flags(it).infra == infra }.sumOf { g.length(it) } / 1000

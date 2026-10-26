@@ -24,22 +24,27 @@
     {
       "path": "graph.lbg",
       "size": 8556905,
-      "sha256": "8925a6c498d873b499ea3f5fa0676d358011a78ab264b9fcf5c5aa65d05b4679"
+      "sha256": "625e72943f43be77a34ec54fa6b446e183b87175e8f2776b8ce41f8d3b2d1717"
     },
     {
       "path": "graph.meta.json",
-      "size": 1778,
-      "sha256": "e44a2bd849604e2ea801f0d64fad8c9298f546a0130ebef1f69ffee782e529d2"
+      "size": 1879,
+      "sha256": "430dd46d73245d80d0986dfc788be0a01bd39bd127c691aed3e8b291dea02006"
+    },
+    {
+      "path": "pois.geojson",
+      "size": 715242,
+      "sha256": "6289eec42ad63e44d241257ffba4109016abe3b30e915eece6ee5165e32e410c"
     },
     {
       "path": "search.lbs",
       "size": 5050459,
-      "sha256": "7d7c697aed008d757946e6b160859387bb811a7e47f5150976cfccec1e1fbe12"
+      "sha256": "36ea487256ee6407594aeddf276081055c439cffc146e7da47dc9468b886cbd6"
     },
     {
       "path": "search.meta.json",
-      "size": 1182,
-      "sha256": "27c40c0bdea421fe250afc38f2e9949f31c41fce3ae1a48ff27fba67301b68ee"
+      "size": 1493,
+      "sha256": "c06d2940cdc4d6dcbe6bb8f004d57d2469e282bfdc3f8d12b7495283e19616c1"
     }
   ]
 }

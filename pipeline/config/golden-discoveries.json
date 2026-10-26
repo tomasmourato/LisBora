@@ -1,0 +1,90 @@
+{
+  "discoveries": [
+    {
+      "name": "Rio, 45 min, volta desde o Cais do Sodré",
+      "start": [38.7056, -9.1452],
+      "minutes": 45,
+      "purpose": "RIVER",
+      "expect": { "minRiversideShare": 0.5, "maxRepeatedShare": 0.5 }
+    },
+    {
+      "name": "Paisagens, 60 min, volta desde o Rossio",
+      "start": [38.7139, -9.1394],
+      "minutes": 60,
+      "purpose": "SCENERY",
+      "expect": { "minViewpoints": 1 }
+    },
+    {
+      "name": "Família, 45 min, volta desde Belém",
+      "start": [38.6970, -9.2060],
+      "minutes": 45,
+      "purpose": "FAMILY",
+      "expect": { "minCalmShare": 0.7, "maxAscentPerKm": 15 }
+    },
+    {
+      "name": "Cultura, 60 min, volta desde o Marquês de Pombal",
+      "start": [38.7253, -9.1500],
+      "minutes": 60,
+      "purpose": "CULTURE",
+      "expect": { "minCulture": 2 }
+    },
+    {
+      "name": "Subidas, 45 min, volta desde o Intendente",
+      "start": [38.7224, -9.1356],
+      "minutes": 45,
+      "purpose": "CLIMBS",
+      "expect": { "minAscentPerKm": 15 }
+    },
+    {
+      "name": "Desporto, 90 min, volta desde o Campo Grande",
+      "start": [38.7590, -9.1550],
+      "minutes": 90,
+      "purpose": "SPORT"
+    },
+    {
+      "name": "Lazer, 60 min, volta desde o Parque das Nações",
+      "start": [38.7680, -9.0940],
+      "minutes": 60,
+      "purpose": "LEISURE",
+      "expect": { "minInfraShare": 0.5 }
+    },
+    {
+      "name": "Descidas, 40 min, volta desde a Graça",
+      "start": [38.7168, -9.1312],
+      "minutes": 40,
+      "purpose": "DESCENTS",
+      "expect": { "maxGradePercent": 9 }
+    },
+    {
+      "name": "GIRA, lazer, 45 min, volta desde Belém (não vai a Algés)",
+      "start": [38.6970, -9.2060],
+      "minutes": 45,
+      "purpose": "LEISURE",
+      "gira": true
+    },
+    {
+      "name": "GIRA, cultura, 60 min, volta desde o Marquês de Pombal",
+      "start": [38.7253, -9.1500],
+      "minutes": 60,
+      "purpose": "CULTURE",
+      "gira": true,
+      "expect": { "minCulture": 2 }
+    },
+    {
+      "name": "Lazer, Alameda → Belém em 75 min",
+      "start": [38.7369, -9.1336],
+      "end": [38.6935, -9.2056],
+      "minutes": 75,
+      "purpose": "LEISURE",
+      "expect": { "maxTimeError": 0.2 }
+    },
+    {
+      "name": "Paisagens, Graça → Cais do Sodré em 40 min",
+      "start": [38.7168, -9.1312],
+      "end": [38.7056, -9.1452],
+      "minutes": 40,
+      "purpose": "SCENERY",
+      "expect": { "maxTimeError": 0.2 }
+    }
+  ]
+}

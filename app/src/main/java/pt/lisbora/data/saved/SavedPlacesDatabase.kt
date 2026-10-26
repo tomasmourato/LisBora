@@ -1,5 +1,6 @@
 package pt.lisbora.data.saved
 
+import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -76,10 +77,17 @@ interface RecentPlaceDao {
     suspend fun clear()
 }
 
-@Database(entities = [SavedPlaceEntity::class, RecentPlaceEntity::class], version = 1, exportSchema = true)
+/** Saved and recent places, and saved Descobrir routes (version 2). */
+@Database(
+    entities = [SavedPlaceEntity::class, RecentPlaceEntity::class, SavedRouteEntity::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 abstract class SavedPlacesDatabase : RoomDatabase() {
     abstract fun savedPlaces(): SavedPlaceDao
     abstract fun recentPlaces(): RecentPlaceDao
+    abstract fun savedRoutes(): SavedRouteDao
 
     companion object {
         const val NAME = "lisbora.db"

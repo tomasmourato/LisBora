@@ -196,7 +196,7 @@ private fun RouteCard(option: RouteOption, index: Int, count: Int, selected: Boo
 
 /** Stacked bar of the route's length by infrastructure, in map colours. */
 @Composable
-private fun InfraBar(option: RouteOption, palette: RoutePalette, modifier: Modifier = Modifier) {
+internal fun InfraBar(option: RouteOption, palette: RoutePalette, modifier: Modifier = Modifier) {
     StackedBar(option.infraShares.map { (infra, share) -> hexColor(palette.infraColor(infra)) to share }, modifier)
 }
 
@@ -210,7 +210,7 @@ private fun StackedBar(parts: List<Pair<Color, Double>>, modifier: Modifier = Mo
 }
 
 @Composable
-private fun RouteDetails(
+internal fun RouteDetails(
     option: RouteOption,
     colorMode: RouteColorMode,
     maxGradePercent: Int?,

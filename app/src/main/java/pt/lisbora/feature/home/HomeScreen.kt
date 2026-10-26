@@ -62,8 +62,13 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.lisbora.R
 import pt.lisbora.data.saved.SavedKind
+import pt.lisbora.feature.discover.DiscoverHeader
+import pt.lisbora.feature.discover.DiscoverPanel
+import pt.lisbora.feature.discover.DiscoverResults
 import pt.lisbora.feature.map.CycleNetworkPalette
 import pt.lisbora.feature.map.LisboraMap
+import pt.lisbora.feature.map.PoiLayer
+import pt.lisbora.feature.map.PoiPalette
 import pt.lisbora.feature.map.RoutePalette
 import pt.lisbora.feature.planner.DirectionsHeader
 import pt.lisbora.feature.planner.PickOnMapBanner
@@ -132,15 +137,18 @@ fun HomeRoute(
     }
 
     val routePalette = if (darkTheme) RoutePalette.Dark else RoutePalette.Light
-    val overlay = remember(planner.mode, routePalette) { plannerOverlay(planner.mode, routePalette) }
+    val overlay = remember(planner.mode, routePalette, planner.giraStations) {
+        plannerOverlay(planner.mode, routePalette, planner.giraStations)
+    }
 
     HomeScreen(
         uiState = uiState,
         darkTheme = darkTheme,
-        onDiscoverClick = viewModel::onDiscoverClick,
+        onDiscoverClick = plannerActions::onDiscoverOpen,
         onMessageShown = viewModel::onMessageShown,
         onLegendToggle = viewModel::onLegendToggle,
         onCycleNetworkVisibleChange = viewModel::onCycleNetworkVisibleChange,
+        onPoiLayerChange = viewModel::onPoiLayerChange,
         onSegmentDismiss = viewModel::onSegmentDismiss,
         onMyLocationClick = {
             if (context.hasLocationPermission()) viewModel.onMyLocationClick() else requestPermission()
@@ -165,7 +173,9 @@ fun HomeRoute(
                 cameraRequest = planner.camera,
                 cameraPadding = insets.camera,
                 pickMode = planner.mode is PlannerMode.PickOnMap,
-                dimCycleNetwork = planner.mode is PlannerMode.Directions,
+                dimCycleNetwork = planner.mode is PlannerMode.Directions ||
+                    (planner.mode as? PlannerMode.Discover)?.results is DiscoverResults.Ready,
+                poiLayers = uiState.poiLayers,
                 onLongPress = plannerActions::onMapLongPress,
                 onPointPicked = plannerActions::onMapPointPicked,
                 onRouteClick = plannerActions::onRouteSelect,
@@ -197,6 +207,7 @@ fun HomeScreen(
     onSegmentDismiss: () -> Unit,
     onMyLocationClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onPoiLayerChange: (PoiLayer, Boolean) -> Unit = { _, _ -> },
     planner: PlannerUiState = PlannerUiState(),
     plannerActions: PlannerActions = PlannerActionsAdapter(),
     mapContent: @Composable (insets: MapInsets) -> Unit,
@@ -218,6 +229,7 @@ fun HomeScreen(
     }
     val palette = if (darkTheme) CycleNetworkPalette.Dark else CycleNetworkPalette.Light
     val routePalette = if (darkTheme) RoutePalette.Dark else RoutePalette.Light
+    val poiPalette = if (darkTheme) PoiPalette.Dark else PoiPalette.Light
     val mode = planner.mode
 
     // Heights of what covers the map at the top and at the bottom, measured so the map keeps its
@@ -276,6 +288,14 @@ fun HomeScreen(
             }
             when (mode) {
                 is PlannerMode.Directions -> DirectionsHeader(mode, routePalette, plannerActions, measureTop)
+                is PlannerMode.Discover -> DiscoverHeader(
+                    discover = mode,
+                    palette = routePalette,
+                    onBack = plannerActions::onDiscoverBack,
+                    onEndpointClick = plannerActions::onEndpointClick,
+                    onPreferences = plannerActions::onPreferences,
+                    modifier = measureTop,
+                )
                 is PlannerMode.PickOnMap -> PickOnMapBanner(mode.target, plannerActions::onPickCancel, measureTop)
                 else -> {
                     SearchPill(
@@ -292,11 +312,15 @@ fun HomeScreen(
                         Icon(painterResource(R.drawable.ic_layers), contentDescription = null)
                     }
                     AnimatedVisibility(visible = uiState.legendExpanded) {
+                        val mapData = (uiState.map as? MapLoadState.Ready)?.data
                         CycleNetworkLegend(
-                            meta = (uiState.map as? MapLoadState.Ready)?.data?.cycleNetworkMeta,
+                            meta = mapData?.cycleNetworkMeta,
                             palette = palette,
                             cycleNetworkVisible = uiState.cycleNetworkVisible,
                             onVisibleChange = onCycleNetworkVisibleChange,
+                            poiLayers = uiState.poiLayers.takeIf { mapData?.hasPois == true },
+                            poiPalette = poiPalette,
+                            onPoiLayerChange = onPoiLayerChange,
                         )
                     }
                 }
@@ -339,6 +363,16 @@ fun HomeScreen(
                     maxDetailsHeight = screenHeight * 0.45f,
                     actions = plannerActions,
                     modifier = measureBottom,
+                )
+                is PlannerMode.Discover -> DiscoverPanel(
+                    discover = mode,
+                    savedRoutes = planner.savedRoutes,
+                    maxGradePercent = planner.settings.maxGradePercent,
+                    palette = routePalette,
+                    maxHeight = screenHeight * 0.55f,
+                    actions = plannerActions,
+                    modifier = measureBottom,
+                    giraStations = planner.giraStations,
                 )
                 is PlannerMode.PlaceDetails -> Box(measureBottom.navigationBarsPadding().padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
                     PlaceCard(

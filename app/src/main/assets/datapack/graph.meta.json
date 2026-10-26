@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "dataVersion": "20261025T2343Z",
+  "dataVersion": "20261026T1537Z",
   "bbox": "-9.3,38.655,-9.05,38.83",
   "license": "ODbL (base de dados derivada do OpenStreetMap)",
   "attribution": "© OpenStreetMap contributors (ODbL); Rede Ciclável © Câmara Municipal de Lisboa (CC BY 4.0), dados normalizados pela LisBora; Elevação: Mapterhorn, com dados da Direção-Geral do Território (LiDAR, CC BY 4.0) e Copernicus GLO-30 (© DLR e.V. 2010-2014 e © Airbus Defence and Space GmbH 2014-2018, fornecido no âmbito do COPERNICUS pela União Europeia e a ESA)",
@@ -26,6 +26,10 @@
     "edges": 181403,
     "turnRestrictions": 3395,
     "cmlMatchedShare": 0.945,
+    "riversideKm": 128.6,
+    "greenKm": 1028.8,
+    "viewpointEdges": 1194,
+    "lisbonKm": 2992.1,
     "kmByInfra": {
       "NONE": 6529.0,
       "SEGREGATED_TRACK": 116.6,

@@ -16,6 +16,7 @@ import pt.lisbora.data.datapack.InstalledDataPack
 import pt.lisbora.di.IoDispatcher
 import pt.lisbora.feature.map.CycleNetworkPalette
 import pt.lisbora.feature.map.MapStyleComposer
+import pt.lisbora.feature.map.PoiPalette
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,6 +27,8 @@ data class MapData(
     val darkStyle: String,
     val cycleNetworkMeta: CycleNetworkMeta,
     val hasBasemap: Boolean,
+    /** The data pack has points of interest, so the legend offers their layers. */
+    val hasPois: Boolean = false,
 )
 
 interface MapDataRepository {
@@ -54,22 +57,26 @@ class BundledMapDataRepository @Inject constructor(
             ?.let { CycleNetworkMeta.parse(it.readText()) }
             ?: CycleNetworkMeta(attribution = "", sourceLastEdit = null, lengthKmByClass = emptyMap())
         val basemap = pack.file(DataPackInstaller.BASEMAP_FILE)
+        val pois = pack.file(DataPackInstaller.POIS_FILE)
         val elevationAttribution = pack.file(DataPackInstaller.GRAPH_META_FILE)
             ?.let { runCatching { GraphMeta.elevationAttribution(it.readText()) }.getOrNull() }
 
-        fun style(asset: String, palette: CycleNetworkPalette) = MapStyleComposer.compose(
+        fun style(asset: String, palette: CycleNetworkPalette, poiPalette: PoiPalette) = MapStyleComposer.compose(
             baseStyle = assets.open(asset).bufferedReader().use { it.readText() },
             basemapPath = basemap?.absolutePath,
             cycleNetworkPath = cycleNetwork.absolutePath,
             cycleAttribution = meta.attribution,
             palette = palette,
             routeAttribution = elevationAttribution,
+            poisPath = pois?.absolutePath,
+            poiPalette = poiPalette,
         )
         return MapData(
-            lightStyle = style("map/style-light.json", CycleNetworkPalette.Light),
-            darkStyle = style("map/style-dark.json", CycleNetworkPalette.Dark),
+            lightStyle = style("map/style-light.json", CycleNetworkPalette.Light, PoiPalette.Light),
+            darkStyle = style("map/style-dark.json", CycleNetworkPalette.Dark, PoiPalette.Dark),
             cycleNetworkMeta = meta,
             hasBasemap = basemap != null,
+            hasPois = pois != null,
         )
     }
 }

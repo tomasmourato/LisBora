@@ -23,14 +23,17 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
 
     val rider = RiderModel(preferences.rider)
     private val maxGrade = preferences.maxGradePercent?.div(100)
+    private val stayInLisbon = preferences.stayInLisbon && (0 until graph.edgeCount).any { graph.flags(it).lisbon }
     private val fullCost = FloatArray(graph.edgeCount * 2) { Float.NaN }
     private val fullTime = FloatArray(graph.edgeCount * 2) { Float.NaN }
 
     /**
      * Lower bound of cost per metre over any edge, for an admissible A* heuristic: the smallest comfort
-     * factor these preferences can give (every other multiplier is at least 1) at the fastest possible speed.
+     * factor these preferences can give (infrastructure times the route bias; every other multiplier is
+     * at least 1) at the fastest possible speed.
      */
-    val minCostPerMetre: Double = EdgeInfra.entries.minOf { infraFactor(it, stress = 1) }.coerceAtMost(1.0) / max(
+    val minCostPerMetre: Double = EdgeInfra.entries.minOf { infraFactor(it, stress = 1) }.coerceAtMost(1.0) *
+        preferences.bias.minFactor / max(
         preferences.rider.level.maxDescentKmh / 3.6 * preferences.rider.personalFactor,
         FERRY_SPEED_MPS,
     )
@@ -165,7 +168,7 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
 
     /** Comfort multiplier of a whole edge in one direction (grade aside); infinite when excluded. */
     private fun edgeFactor(flags: EdgeFlags, reverse: Boolean): Double {
-        if (flags.isSteps) return Double.POSITIVE_INFINITY
+        if (flags.isSteps || (stayInLisbon && !flags.lisbon)) return Double.POSITIVE_INFINITY
         if (flags.isFerry) return if (preferences.allowFerries) 1.0 else Double.POSITIVE_INFINITY
         val bike = preferences.rider.bike
         var factor = infraFactor(flags.infra, flags.stress)
@@ -182,6 +185,16 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
             }
             else -> 1.0
         }
+        return factor * sceneryFactor(flags)
+    }
+
+    /** The route bias of a riverside, green or viewpoint edge (the smallest that applies), else 1. */
+    private fun sceneryFactor(flags: EdgeFlags): Double {
+        val bias = preferences.bias
+        var factor = 1.0
+        if (flags.riverside) factor = min(factor, bias.riverside)
+        if (flags.green) factor = min(factor, bias.green)
+        if (flags.viewpoint) factor = min(factor, bias.viewpoint)
         return factor
     }
 
@@ -207,11 +220,13 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
 
     /**
      * Extra multiplier for the grade of a segment in the direction of travel: climbs above the rider's
-     * maximum, and descents ridden downhill (see [descentFactor]). Walking down is not penalised.
+     * maximum, climbs the route bias seeks or avoids, and descents ridden downhill (see [descentFactor]).
+     * Walking down is not penalised.
      */
     private fun gradeFactor(flags: EdgeFlags, mode: TravelMode, grade: Double): Double {
         var factor = 1.0
         if (maxGrade != null && grade > maxGrade) factor *= STEEP_CLIMB_FACTOR
+        if (mode == TravelMode.RIDE && grade >= CLIMB_BIAS_FROM) factor *= preferences.bias.climb
         if (mode == TravelMode.RIDE && grade < 0) factor *= descentFactor(-grade, isRough(flags))
         return factor
     }
@@ -221,6 +236,9 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
         val STRESS_FACTORS = doubleArrayOf(1.0, 1.2, 1.7, 2.6)
         const val PUSH_FACTOR = 2.5
         const val STEEP_CLIMB_FACTOR = 6.0
+
+        /** Grade from which [RouteBias.climb] applies. */
+        const val CLIMB_BIAS_FROM = 0.03
         /** Rough descents (cobbles, tram rails) cost a little more from this grade on, as in most of Lisbon... */
         const val ROUGH_DESCENT_FROM = 0.06
         const val ROUGH_DESCENT_PER_PERCENT = 0.2

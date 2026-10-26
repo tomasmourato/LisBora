@@ -1,6 +1,7 @@
 package pt.lisbora.di
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
@@ -15,6 +16,12 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import pt.lisbora.data.datapack.AssetSource
 import pt.lisbora.data.datapack.DataPackInstaller
+import pt.lisbora.data.discover.DiscoveryRepository
+import pt.lisbora.data.discover.GraphDiscoveryRepository
+import pt.lisbora.data.gira.BundledGiraRepository
+import pt.lisbora.data.gira.GiraRepository
+import pt.lisbora.data.gira.LiveGiraRepository
+import pt.lisbora.data.gira.VaimooGiraFeed
 import pt.lisbora.data.location.AndroidLocationRepository
 import pt.lisbora.data.location.LocationRepository
 import pt.lisbora.data.map.BundledMapDataRepository
@@ -22,8 +29,10 @@ import pt.lisbora.data.map.MapDataRepository
 import pt.lisbora.data.routing.GraphRoutingRepository
 import pt.lisbora.data.routing.RoutingRepository
 import pt.lisbora.data.saved.RoomSavedPlacesRepository
+import pt.lisbora.data.saved.RoomSavedRoutesRepository
 import pt.lisbora.data.saved.SavedPlacesDatabase
 import pt.lisbora.data.saved.SavedPlacesRepository
+import pt.lisbora.data.saved.SavedRoutesRepository
 import pt.lisbora.data.search.OfflineSearchRepository
 import pt.lisbora.data.search.SearchRepository
 import pt.lisbora.data.settings.DataStoreRidingSettingsRepository
@@ -75,6 +84,12 @@ object DataModule {
 
     @Provides
     fun clock(): Clock = Clock.systemUTC()
+
+    /** Live bikes and docks, with the bundled stations when offline. */
+    @Provides
+    @Singleton
+    fun giraRepository(bundled: BundledGiraRepository, feed: VaimooGiraFeed, clock: Clock): GiraRepository =
+        LiveGiraRepository(bundled, feed, clock) { Log.w("LisBoraGira", it) }
 }
 
 @Module
@@ -98,4 +113,10 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun savedPlacesRepository(impl: RoomSavedPlacesRepository): SavedPlacesRepository
+
+    @Binds
+    abstract fun savedRoutesRepository(impl: RoomSavedRoutesRepository): SavedRoutesRepository
+
+    @Binds
+    abstract fun discoveryRepository(impl: GraphDiscoveryRepository): DiscoveryRepository
 }

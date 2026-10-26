@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -54,6 +55,7 @@ enum class RecenterResult { CENTERED, OUTSIDE_SERVICE_AREA, UNAVAILABLE }
 private const val CAMERA_ANIMATION_MS = 700
 private const val DIMMED_NETWORK_OPACITY = 0.35f
 private const val CASING_OPACITY = 0.9f
+private const val PADDING_SETTLE_FRAMES = 3
 
 /**
  * The MapLibre map: offline basemap, the CML cycle network and the planned routes. Stateless towards
@@ -64,6 +66,7 @@ private const val CASING_OPACITY = 0.9f
  * [cameraPadding] is the free area routes and places are framed in.
  * In [pickMode] a tap reports a point ([onPointPicked]) instead of selecting a segment.
  * [dimCycleNetwork] fades the network while a route is shown, so the route stands out.
+ * [poiLayers] are the point-of-interest layers switched on in the legend.
  */
 @Composable
 fun LisboraMap(
@@ -82,6 +85,7 @@ fun LisboraMap(
     cameraPadding: PaddingValues = contentPadding,
     pickMode: Boolean = false,
     dimCycleNetwork: Boolean = false,
+    poiLayers: Set<PoiLayer> = emptySet(),
     onLongPress: (GeoPoint) -> Unit = {},
     onPointPicked: (GeoPoint) -> Unit = {},
     onRouteClick: (Int) -> Unit = {},
@@ -178,6 +182,15 @@ fun LisboraMap(
         )
     }
 
+    LaunchedEffect(style, poiLayers) {
+        val s = style ?: return@LaunchedEffect
+        PoiLayer.entries.forEach { layer ->
+            val visibility = PropertyFactory.visibility(if (layer in poiLayers) Property.VISIBLE else Property.NONE)
+            s.getLayer(layer.layerId)?.setProperties(visibility)
+            if (layer == PoiLayer.PLACES) s.getLayer(PoiLayer.PLACES_LABELS)?.setProperties(visibility)
+        }
+    }
+
     LaunchedEffect(style, selectedSegmentId) {
         val s = style ?: return@LaunchedEffect
         if (selectedSegmentId == null) selectedFeatureJson = null
@@ -197,6 +210,9 @@ fun LisboraMap(
     LaunchedEffect(map, cameraRequest?.id) {
         val m = map ?: return@LaunchedEffect
         val request = cameraRequest ?: return@LaunchedEffect
+        // The panel that brought this request (e.g. the routes found) is measured in the next frames:
+        // frame what it leaves free, not what the previous panel did.
+        repeat(PADDING_SETTLE_FRAMES) { withFrameNanos { } }
         val padding = with(density) {
             val p = currentCameraPadding
             intArrayOf(

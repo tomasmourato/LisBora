@@ -2,12 +2,16 @@ package pt.lisbora.feature.planner
 
 import pt.lisbora.data.saved.SavedKind
 import pt.lisbora.data.saved.SavedPlace
+import pt.lisbora.data.saved.SavedRoute
 import pt.lisbora.data.settings.RidingSettings
+import pt.lisbora.feature.discover.DiscoverActions
+import pt.lisbora.routing.discover.DiscoveryPurpose
+import pt.lisbora.routing.discover.DiscoveryTweak
 import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.search.Place
 
 /** Everything the planner panels and the map can ask of the planner. */
-interface PlannerActions : SearchActions, PlaceActions, DirectionsActions, RoutesActions {
+interface PlannerActions : SearchActions, PlaceActions, DirectionsActions, RoutesActions, DiscoverActions {
     fun onSearchOpen()
     fun onPickCancel()
     fun onMapLongPress(point: GeoPoint)
@@ -53,6 +57,19 @@ open class PlannerActionsAdapter : PlannerActions {
     override fun onToggleDetails() = Unit
     override fun onColorMode(mode: RouteColorMode) = Unit
     override fun onChooseOrigin() = Unit
+    override fun onDiscoverOpen() = Unit
+    override fun onDiscoverBack() = Unit
+    override fun onDiscoverDestinationChange(toDestination: Boolean) = Unit
+    override fun onDiscoverMinutes(minutes: Int) = Unit
+    override fun onDiscoverPurpose(purpose: DiscoveryPurpose) = Unit
+    override fun onDiscoverGira(on: Boolean) = Unit
+    override fun onDiscoverSearch() = Unit
+    override fun onDiscoverAnother() = Unit
+    override fun onDiscoverTweak(tweak: DiscoveryTweak) = Unit
+    override fun onDiscoverEdit() = Unit
+    override fun onDiscoverSave() = Unit
+    override fun onSavedRouteOpen(route: SavedRoute) = Unit
+    override fun onSavedRouteRemove(route: SavedRoute) = Unit
 }
 
 /**
@@ -95,4 +112,17 @@ class PlannerViewModelActions(
     override fun onToggleDetails() = viewModel.onDetailsToggle()
     override fun onColorMode(mode: RouteColorMode) = viewModel.onColorModeChange(mode)
     override fun onChooseOrigin() = viewModel.onEndpointClick(SearchTarget.ORIGIN)
+    override fun onDiscoverOpen() = viewModel.onDiscoverOpen()
+    override fun onDiscoverBack() = viewModel.onDiscoverBack()
+    override fun onDiscoverDestinationChange(toDestination: Boolean) = viewModel.onDiscoverDestinationChange(toDestination)
+    override fun onDiscoverMinutes(minutes: Int) = viewModel.onDiscoverMinutesChange(minutes)
+    override fun onDiscoverPurpose(purpose: DiscoveryPurpose) = viewModel.onDiscoverPurposeChange(purpose)
+    override fun onDiscoverGira(on: Boolean) = viewModel.onDiscoverGiraChange(on)
+    override fun onDiscoverSearch() = viewModel.onDiscoverSearch()
+    override fun onDiscoverAnother() = viewModel.onDiscoverAnother()
+    override fun onDiscoverTweak(tweak: DiscoveryTweak) = viewModel.onDiscoverTweak(tweak)
+    override fun onDiscoverEdit() = viewModel.onDiscoverEdit()
+    override fun onDiscoverSave() = viewModel.onDiscoverSave()
+    override fun onSavedRouteOpen(route: SavedRoute) = viewModel.onSavedRouteOpen(route)
+    override fun onSavedRouteRemove(route: SavedRoute) = viewModel.onSavedRouteRemove(route)
 }

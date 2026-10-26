@@ -29,6 +29,7 @@ object RouteLayers {
     const val SELECTED = "route-selected"
     const val SELECTED_DASHED = "route-selected-dashed"
     const val MARKERS = "route-markers"
+    const val MARKER_LABELS = "route-marker-labels"
 
     /** Feature property naming the alternative's index, used when the user taps a grey route. */
     const val INDEX_PROPERTY = "index"
@@ -49,6 +50,9 @@ data class RoutePalette(
     val origin: String,
     val destination: String,
     val pin: String,
+    /** Places a discovered route goes through or passes. */
+    val poi: String,
+    val gira: String,
     val hazards: Map<HazardKind, String>,
 ) {
     fun hazardColor(kind: HazardKind): String = hazards.getValue(kind)
@@ -72,6 +76,8 @@ data class RoutePalette(
             origin = "#0B7A4B",
             destination = "#C62828",
             pin = "#7C3AED",
+            poi = "#9333EA",
+            gira = "#DB2777",
             hazards = mapOf(
                 HazardKind.TRAM_TRACKS to "#E07B00",
                 HazardKind.COBBLES to "#8B5A2B",
@@ -95,6 +101,8 @@ data class RoutePalette(
             origin = "#3DDC84",
             destination = "#FF6B6B",
             pin = "#C4B5FD",
+            poi = "#C084FC",
+            gira = "#F472B6",
             hazards = mapOf(
                 HazardKind.TRAM_TRACKS to "#FF9F43",
                 HazardKind.COBBLES to "#C99A6B",
@@ -116,9 +124,12 @@ data class RoutePalette(
     }
 }
 
-/** A point drawn over the map: the trip's ends, a dropped pin or the start of a hazard. */
-data class MapMarker(val point: GeoPoint, val kind: Kind, val hazard: HazardKind? = null) {
-    enum class Kind { ORIGIN, DESTINATION, PIN, HAZARD }
+/**
+ * A point drawn over the map: the trip's ends, a dropped pin, the start of a hazard, a place on the way
+ * or a GIRA station (where a GIRA ride takes or returns its bike: [Kind.GIRA_STOP]), maybe named.
+ */
+data class MapMarker(val point: GeoPoint, val kind: Kind, val hazard: HazardKind? = null, val label: String? = null) {
+    enum class Kind { ORIGIN, DESTINATION, PIN, HAZARD, POI, GIRA, GIRA_EMPTY, GIRA_STOP }
 }
 
 /** GeoJSON for the route and marker sources. Pure, so it is unit-tested on the JVM. */
@@ -147,6 +158,11 @@ object RouteGeoJson {
                 MapMarker.Kind.DESTINATION -> palette.destination to 9
                 MapMarker.Kind.PIN -> palette.pin to 9
                 MapMarker.Kind.HAZARD -> palette.hazardColor(m.hazard ?: HazardKind.TRAM_TRACKS) to 5
+                MapMarker.Kind.POI -> palette.poi to 6
+                MapMarker.Kind.GIRA -> palette.gira to 4
+                // No bike to take right now (or closed): greyed out.
+                MapMarker.Kind.GIRA_EMPTY -> palette.alternative to 3
+                MapMarker.Kind.GIRA_STOP -> palette.gira to 8
             }
             buildJsonObject {
                 put("type", "Feature")
@@ -154,6 +170,7 @@ object RouteGeoJson {
                     put("kind", m.kind.name.lowercase())
                     put("color", color)
                     put("radius", radius)
+                    m.label?.let { put("label", it) }
                 }
                 putJsonObject("geometry") {
                     put("type", "Point")

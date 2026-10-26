@@ -68,7 +68,8 @@ enum class SurfaceKind {
  *
  * Layout (bit offsets): 0-1 forward mode, 2-3 backward mode, 4-6 infra, 7-11 road, 12-15 surface,
  * 16 tram, 17 bridge, 18 tunnel, 19 roundabout, 20 traffic signals, 21-22 stress-1, 23-27 max speed / 5,
- * 28-30 lanes. Bits 31-63 are reserved; readers must ignore them.
+ * 28-30 lanes, 31 riverside, 32 green, 33 near a viewpoint, 34 inside the municipality of Lisbon.
+ * Bits 35-63 are reserved; readers must ignore them.
  */
 @JvmInline
 value class EdgeFlags(val bits: Long) {
@@ -94,6 +95,18 @@ value class EdgeFlags(val bits: Long) {
     /** Number of lanes, or 0 when unknown. */
     val lanes: Int get() = field(28, 3)
 
+    /** Along the river or a dock, within sight of the water. */
+    val riverside: Boolean get() = flag(31)
+
+    /** Through a park, garden or wood (Monsanto). */
+    val green: Boolean get() = flag(32)
+
+    /** Passes a viewpoint ("miradouro"). */
+    val viewpoint: Boolean get() = flag(33)
+
+    /** Inside the municipality of Lisbon, the only place GIRA bikes may be ridden. */
+    val lisbon: Boolean get() = flag(34)
+
     val isSteps: Boolean get() = road == RoadKind.STEPS
     val isFerry: Boolean get() = road == RoadKind.FERRY
 
@@ -103,7 +116,7 @@ value class EdgeFlags(val bits: Long) {
     override fun toString(): String =
         "EdgeFlags(fwd=${mode(false)}, bwd=${mode(true)}, infra=$infra, road=$road, surface=$surface, " +
             "tram=$tram, bridge=$bridge, tunnel=$tunnel, roundabout=$roundabout, signals=$trafficSignals, " +
-            "stress=$stress, maxSpeed=$maxSpeedKmh, lanes=$lanes)"
+            "stress=$stress, maxSpeed=$maxSpeedKmh, lanes=$lanes, riverside=$riverside, green=$green, viewpoint=$viewpoint, lisbon=$lisbon)"
 
     companion object {
         const val MAX_SPEED_KMH = 155
@@ -123,6 +136,10 @@ value class EdgeFlags(val bits: Long) {
             stress: Int = 1,
             maxSpeedKmh: Int = 0,
             lanes: Int = 0,
+            riverside: Boolean = false,
+            green: Boolean = false,
+            viewpoint: Boolean = false,
+            lisbon: Boolean = false,
         ): EdgeFlags {
             require(stress in 1..4) { "stress must be 1..4: $stress" }
             var bits = forward.ordinal.toLong()
@@ -138,6 +155,10 @@ value class EdgeFlags(val bits: Long) {
             bits = bits or ((stress - 1).toLong() shl 21)
             bits = bits or ((maxSpeedKmh.coerceIn(0, MAX_SPEED_KMH) / 5).toLong() shl 23)
             bits = bits or (lanes.coerceIn(0, MAX_LANES).toLong() shl 28)
+            if (riverside) bits = bits or (1L shl 31)
+            if (green) bits = bits or (1L shl 32)
+            if (viewpoint) bits = bits or (1L shl 33)
+            if (lisbon) bits = bits or (1L shl 34)
             return EdgeFlags(bits)
         }
     }

@@ -7,6 +7,8 @@ import pt.lisbora.pipeline.datapack.PackManifest
 import pt.lisbora.pipeline.datapack.PrettyJson
 import pt.lisbora.pipeline.http.JdkHttpGet
 import pt.lisbora.pipeline.osm.OsmExtract
+import pt.lisbora.routing.discover.Poi
+import pt.lisbora.routing.discover.PoiKind
 import pt.lisbora.routing.geo.GeoBounds
 import pt.lisbora.routing.geo.ServiceArea
 import pt.lisbora.routing.search.PlaceCategory
@@ -36,8 +38,9 @@ data class SearchOptions(
 )
 
 /**
- * `search`: OSM → streets, places, points of interest and addresses of the region → `search.lbs`.
- * The index only reaches the data pack when every reference search finds its place.
+ * `search`: OSM → streets, places, points of interest and addresses of the region → `search.lbs`, plus
+ * the points of interest of the map layer and Descobrir → `pois.geojson`.
+ * Both only reach the data pack when every reference search finds its place.
  */
 class BuildSearchCommand(
     private val http: JdkHttpGet,
@@ -64,8 +67,12 @@ class BuildSearchCommand(
             out.println("${if (r.passed) "OK   " else "FALHA"} \"${r.search.query}\" → ${r.rank?.let { "#$it" } ?: "não encontrado"}: $top")
         }
 
+        val pois = PoiCatalog.collect(places)
+        out.println("Pontos de interesse: ${pois.size} (${PoiKind.entries.joinToString { k -> "${pois.count { it.kind == k }} ${k.code}" }})")
+
         Files.createDirectories(options.workDir)
         writeIndex(data, options.workDir.resolve(CANDIDATE_FILE))
+        options.workDir.resolve(POIS_CANDIDATE_FILE).writeText(PrettyJson.encodeCompact(PoiCatalog.geoJson(pois)))
         val failed = golden.filterNot { it.passed }
         if (failed.isNotEmpty()) {
             out.println("ERRO: ${failed.size} pesquisas de referência falharam; o índice não foi escrito em ${options.packDir}.")
@@ -75,7 +82,8 @@ class BuildSearchCommand(
         PackManifest.prepare(options.packDir)
         val target = options.packDir.resolve(SearchIndexFormat.FILE_NAME)
         writeIndex(data, target)
-        options.packDir.resolve(META_FILE).writeText(PrettyJson.encode(meta(data, places.dataDate)) + "\n")
+        options.packDir.resolve(PoiCatalog.FILE_NAME).writeText(PrettyJson.encodeCompact(PoiCatalog.geoJson(pois)))
+        options.packDir.resolve(META_FILE).writeText(PrettyJson.encode(meta(data, places.dataDate, pois)) + "\n")
         PackManifest.write(options.packDir)
         out.println("Escrito $target (%.1f MB)".format(target.fileSize() / 1_048_576.0))
         return 0
@@ -87,7 +95,7 @@ class BuildSearchCommand(
         Files.move(partial, target, StandardCopyOption.REPLACE_EXISTING)
     }
 
-    private fun meta(data: SearchIndexData, osmDate: String?) = buildJsonObject {
+    private fun meta(data: SearchIndexData, osmDate: String?, pois: List<Poi>) = buildJsonObject {
         put("formatVersion", SearchIndexFormat.FORMAT_VERSION)
         put("dataVersion", data.dataVersion)
         put("bbox", bounds.toBboxString())
@@ -108,11 +116,15 @@ class BuildSearchCommand(
                     if (count > 0) put(category.name, count)
                 }
             }
+            putJsonObject("poisByKind") {
+                PoiKind.entries.forEach { kind -> put(kind.code, pois.count { it.kind == kind }) }
+            }
         }
     }
 
     companion object {
         const val META_FILE = "search.meta.json"
         const val CANDIDATE_FILE = "search-candidate.lbs"
+        const val POIS_CANDIDATE_FILE = "pois-candidate.geojson"
     }
 }

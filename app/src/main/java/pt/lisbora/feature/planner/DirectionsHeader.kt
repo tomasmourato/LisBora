@@ -90,13 +90,13 @@ fun DirectionsHeader(
 }
 
 @Composable
-private fun endpointName(endpoint: Endpoint): String = when (endpoint) {
+internal fun endpointName(endpoint: Endpoint): String = when (endpoint) {
     Endpoint.MyLocation -> stringResource(R.string.search_my_location)
     is Endpoint.AtPlace -> endpoint.place.displayName()
 }
 
 @Composable
-private fun EndpointField(label: String, value: String?, placeholder: String, dot: Color, onClick: () -> Unit) {
+internal fun EndpointField(label: String, value: String?, placeholder: String, dot: Color, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

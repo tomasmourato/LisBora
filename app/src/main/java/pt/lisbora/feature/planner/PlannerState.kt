@@ -2,8 +2,14 @@ package pt.lisbora.feature.planner
 
 import androidx.annotation.StringRes
 import pt.lisbora.R
+import pt.lisbora.data.gira.GiraStation
 import pt.lisbora.data.saved.SavedPlace
+import pt.lisbora.data.saved.SavedRoute
 import pt.lisbora.data.settings.RidingSettings
+import pt.lisbora.feature.discover.DiscoverOption
+import pt.lisbora.feature.discover.DiscoverResults
+import pt.lisbora.feature.discover.DiscoverSetup
+import pt.lisbora.routing.discover.DiscoveryTweak
 import pt.lisbora.routing.geo.GeoBounds
 import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.search.Place
@@ -68,6 +74,24 @@ sealed interface PlannerMode {
         val selectedOption: RouteOption? get() = (routes as? RoutesState.Ready)?.options?.getOrNull(selected)
     }
 
+    /**
+     * Descobrir: routes for the time available and a purpose, back to the start or towards a destination.
+     * The choices are shown until routes are asked for ([results] is [DiscoverResults.None]).
+     */
+    data class Discover(
+        val setup: DiscoverSetup,
+        val results: DiscoverResults = DiscoverResults.None,
+        val selected: Int = 0,
+        val tweaks: Set<DiscoveryTweak> = emptySet(),
+        /** Changes with each "Outra rota". */
+        val seed: Long = 0,
+        val colorMode: RouteColorMode = RouteColorMode.INFRA,
+        val detailsExpanded: Boolean = false,
+    ) : PlannerMode {
+        val options: List<DiscoverOption> get() = (results as? DiscoverResults.Ready)?.options.orEmpty()
+        val selectedOption: DiscoverOption? get() = options.getOrNull(selected)
+    }
+
     /** Waiting for a tap on the map to choose [target]; [previous] is restored afterwards or on cancel. */
     data class PickOnMap(val target: SearchTarget, val previous: PlannerMode) : PlannerMode
 }
@@ -88,6 +112,8 @@ enum class PlannerMessage(@param:StringRes val textRes: Int) {
     LocationUnavailable(R.string.message_location_unavailable),
     OutsideArea(R.string.planner_point_outside),
     SearchFailed(R.string.search_failed),
+    RouteSaved(R.string.discover_saved),
+    RouteRemoved(R.string.discover_removed),
 }
 
 data class PlannerUiState(
@@ -95,6 +121,10 @@ data class PlannerUiState(
     val search: SearchUiState? = null,
     val saved: List<SavedPlace> = emptyList(),
     val recent: List<Place> = emptyList(),
+    /** Descobrir routes the rider kept, newest first. */
+    val savedRoutes: List<SavedRoute> = emptyList(),
+    /** GIRA stations, loaded when a GIRA ride is being planned. */
+    val giraStations: List<GiraStation> = emptyList(),
     val settings: RidingSettings = RidingSettings(),
     val preferencesOpen: Boolean = false,
     val camera: CameraRequest? = null,

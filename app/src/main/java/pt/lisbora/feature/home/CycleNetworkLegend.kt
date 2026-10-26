@@ -1,6 +1,12 @@
 package pt.lisbora.feature.home
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,18 +28,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import pt.lisbora.R
 import pt.lisbora.data.datapack.CycleNetworkMeta
 import pt.lisbora.feature.map.CycleNetworkPalette
+import pt.lisbora.feature.map.PoiLayer
+import pt.lisbora.feature.map.PoiPalette
+import pt.lisbora.feature.map.hexColor
 import pt.lisbora.feature.map.formatDate
 import pt.lisbora.feature.map.formatKm
 import pt.lisbora.feature.map.labelRes
 import pt.lisbora.routing.model.CycleInfraClass
 
-/** Legend card: one row per infrastructure class with its map colour and length, plus a visibility switch. */
+/**
+ * Legend card: one row per infrastructure class with its map colour and length, plus a visibility switch;
+ * then a switch per point-of-interest layer when the data pack has them ([poiLayers] not null).
+ */
 @Composable
 fun CycleNetworkLegend(
     meta: CycleNetworkMeta?,
@@ -41,6 +54,9 @@ fun CycleNetworkLegend(
     cycleNetworkVisible: Boolean,
     onVisibleChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    poiLayers: Set<PoiLayer>? = null,
+    poiPalette: PoiPalette = PoiPalette.Light,
+    onPoiLayerChange: (PoiLayer, Boolean) -> Unit = { _, _ -> },
 ) {
     Surface(
         modifier = modifier.width(300.dp),
@@ -79,7 +95,35 @@ fun CycleNetworkLegend(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (poiLayers != null) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Text(stringResource(R.string.poi_layers_title), style = MaterialTheme.typography.titleSmall)
+                PoiLayer.entries.forEach { layer ->
+                    PoiLayerRow(
+                        label = stringResource(layer.labelRes),
+                        color = hexColor(poiPalette.color(layer)),
+                        checked = layer in poiLayers,
+                        onCheckedChange = { onPoiLayerChange(layer, it) },
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun PoiLayerRow(label: String, color: Color, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 40.dp)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
+    ) {
+        Box(Modifier.padding(horizontal = 8.dp).size(12.dp).background(color, CircleShape))
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 

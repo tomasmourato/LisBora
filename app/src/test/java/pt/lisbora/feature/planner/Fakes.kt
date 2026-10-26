@@ -3,17 +3,29 @@ package pt.lisbora.feature.planner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import pt.lisbora.data.discover.DiscoveryRepository
+import pt.lisbora.data.gira.GiraRepository
+import pt.lisbora.data.gira.GiraStation
 import pt.lisbora.data.location.LocationRepository
 import pt.lisbora.data.routing.RoutingRepository
 import pt.lisbora.data.saved.SavedKind
 import pt.lisbora.data.saved.SavedPlace
 import pt.lisbora.data.saved.SavedPlacesRepository
+import pt.lisbora.data.saved.SavedRoute
+import pt.lisbora.data.saved.SavedRoutesRepository
 import pt.lisbora.data.search.SearchRepository
 import pt.lisbora.data.settings.RidingSettings
 import pt.lisbora.data.settings.RidingSettingsRepository
 import pt.lisbora.routing.Route
 import pt.lisbora.routing.RouteLeg
 import pt.lisbora.routing.RouteResult
+import pt.lisbora.routing.discover.DiscoveredRoute
+import pt.lisbora.routing.discover.DiscoveryPurpose
+import pt.lisbora.routing.discover.DiscoveryRequest
+import pt.lisbora.routing.discover.DiscoveryResult
+import pt.lisbora.routing.discover.DiscoveryTweak
+import pt.lisbora.routing.discover.Poi
+import pt.lisbora.routing.discover.RouteHighlights
 import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.graph.EdgeFlags
 import pt.lisbora.routing.graph.EdgeInfra
@@ -130,4 +142,73 @@ class FakeSavedPlacesRepository : SavedPlacesRepository {
     override suspend fun clearRecent() {
         recentState.value = emptyList()
     }
+}
+
+/** A discovered route around [route], built through [stops], with the highlights given. */
+fun fakeDiscovered(
+    route: Route,
+    stops: List<GeoPoint> = listOf(route.points.first(), route.points[route.points.size / 2], route.points.first()),
+    anchors: List<Poi> = emptyList(),
+    pois: List<Poi> = anchors,
+    riversideM: Double = 0.0,
+    greenM: Double = 0.0,
+    segregatedM: Double = 0.0,
+    calmShare: Double = 0.5,
+    netDescentM: Double = 0.0,
+) = DiscoveredRoute(
+    route = route,
+    stops = stops,
+    anchors = anchors,
+    turnsBack = false,
+    highlights = RouteHighlights(
+        riversideM = riversideM, greenM = greenM, segregatedM = segregatedM, infraShare = route.infraShare,
+        calmShare = calmShare, pois = pois, netDescentM = netDescentM,
+    ),
+    score = 1.0,
+)
+
+class FakeDiscoveryRepository : DiscoveryRepository {
+    var result: DiscoveryResult = DiscoveryResult.Failure(DiscoveryResult.Reason.NO_ROUTE)
+    var rebuilt: DiscoveredRoute? = null
+    val requests = mutableListOf<DiscoveryRequest>()
+    val rebuildPreferences = mutableListOf<RoutingPreferences>()
+    var warmUps = 0
+
+    override suspend fun discover(request: DiscoveryRequest): DiscoveryResult {
+        requests += request
+        return result
+    }
+
+    override suspend fun rebuild(saved: SavedRoute, preferences: RoutingPreferences): DiscoveredRoute? {
+        rebuildPreferences += preferences
+        return rebuilt
+    }
+
+    override suspend fun warmUp() {
+        warmUps++
+    }
+}
+
+class FakeSavedRoutesRepository : SavedRoutesRepository {
+    private val state = MutableStateFlow<List<SavedRoute>>(emptyList())
+    private var ids = 0L
+
+    override val routes: Flow<List<SavedRoute>> = state
+
+    override suspend fun save(route: DiscoveredRoute, purpose: DiscoveryPurpose, tweaks: Set<DiscoveryTweak>, gira: Boolean): Long {
+        val saved = SavedRoute(
+            ++ids, purpose, tweaks, route.stops, route.turnsBack, route.route.distanceM, route.route.durationS, route.route.ascentM,
+            highlight = route.anchors.firstOrNull()?.name, gira = gira,
+        )
+        state.value = listOf(saved) + state.value
+        return saved.id
+    }
+
+    override suspend fun remove(id: Long) {
+        state.value = state.value.filterNot { it.id == id }
+    }
+}
+
+class FakeGiraRepository(var stations: List<GiraStation> = emptyList()) : GiraRepository {
+    override suspend fun stations(): List<GiraStation> = stations
 }

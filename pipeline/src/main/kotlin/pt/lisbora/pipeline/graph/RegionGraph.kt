@@ -46,6 +46,11 @@ class RegionEdge(
     var tram: Boolean = false
     var signals: Boolean = false
     var stress: Int = 1
+    var riverside: Boolean = false
+    var green: Boolean = false
+    var viewpoint: Boolean = false
+    /** Inside the municipality of Lisbon. */
+    var lisbon: Boolean = false
 
     val length: Double
         get() = points.zipWithNext { a, b ->

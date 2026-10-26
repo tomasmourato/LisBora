@@ -10,6 +10,7 @@ import kotlinx.serialization.json.putJsonObject
 import pt.lisbora.pipeline.graph.ConflationResult
 import pt.lisbora.pipeline.graph.ElevationStats
 import pt.lisbora.pipeline.graph.EnrichmentStats
+import pt.lisbora.pipeline.graph.SceneryStats
 import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.graph.EdgeInfra
 import pt.lisbora.routing.graph.RoutingGraph
@@ -27,6 +28,7 @@ data class QaInput(
     val droppedNodes: Int,
     val elevation: ElevationStats,
     val enrichment: EnrichmentStats,
+    val scenery: SceneryStats,
     val conflation: ConflationResult,
     val minCmlCoverage: Double,
     val graphFailures: List<String>,
@@ -100,6 +102,9 @@ object QaReport {
         appendLine("| Nós fora do maior componente (descartados) | ${input.droppedNodes} |")
         appendLine("| Arestas com elétrico | ${input.enrichment.tramEdges} |")
         appendLine("| Arestas com semáforo | ${input.enrichment.signalEdges} |")
+        appendLine("| Junto ao rio / em parques e matas (km) | %.1f / %.1f |".format(input.scenery.riversideKm, input.scenery.greenKm))
+        appendLine("| Arestas junto a miradouros | ${input.scenery.viewpointEdges} |")
+        appendLine("| No concelho de Lisboa (km, onde a GIRA pode ir) | %.1f |".format(input.scenery.lisbonKm))
         appendLine("| Sentidos passados de \"empurrar\" a \"pedalar\" por estarem na rede da CML | ${input.enrichment.upgradedToRide} |")
         appendLine("| Elevação: arestas amostradas / pontos acrescentados | ${input.elevation.sampledEdges} / ${input.elevation.addedPoints} |")
         appendLine("| Elevação: pontes, túneis e barcos interpolados (arestas / nós) | ${input.elevation.interpolatedEdges} / ${input.elevation.interpolatedNodes} |")
@@ -204,6 +209,24 @@ object QaReport {
                     put("type", "Point")
                     put("coordinates", coordinates(steep.point))
                 }
+            }
+        },
+    )
+
+    /** Riverside and green edges (Descobrir), to check the scenic attributes on a map. */
+    fun sceneryGeoJson(graph: RoutingGraph): JsonObject = featureCollection(
+        (0 until graph.edgeCount).mapNotNull { e ->
+            val flags = graph.flags(e)
+            val kind = when {
+                flags.riverside && flags.green -> "both"
+                flags.riverside -> "riverside"
+                flags.green -> "green"
+                else -> return@mapNotNull null
+            }
+            lineFeature((0 until graph.pointCount(e)).map { graph.point(e, it) }) {
+                put("kind", kind)
+                put("name", graph.name(e))
+                put("viewpoint", flags.viewpoint)
             }
         },
     )

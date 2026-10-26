@@ -9,6 +9,7 @@ import com.graphhopper.reader.ReaderRelation
 import com.graphhopper.reader.ReaderWay
 import com.graphhopper.reader.osm.OSMInputFile
 import com.graphhopper.reader.osm.SkipOptions
+import pt.lisbora.routing.discover.Poi
 import pt.lisbora.routing.geo.GeoBounds
 import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.graph.GraphData
@@ -44,6 +45,8 @@ data class OsmPlaces(
     val adminAreas: List<AdminArea>,
     /** Timestamp of the extract (PBF header), when known. */
     val dataDate: String?,
+    /** Drinking water, bike parking, playgrounds… for the map layer (see [PoiCatalog.unnamedKind]). */
+    val amenities: List<Poi> = emptyList(),
 )
 
 /**
@@ -77,6 +80,7 @@ class OsmPlaceScan(
         val pois = mutableListOf<OsmPoi>()
         val addresses = mutableListOf<OsmAddress>()
         val places = mutableListOf<OsmPlaceNode>()
+        val amenities = mutableListOf<Poi>()
         var dataDate: String? = null
 
         // 1. Nodes: coordinates near the region, and named point features inside it.
@@ -88,7 +92,7 @@ class OsmPlaceScan(
             coordinates.put(node.id, pack(node.lat, node.lon))
             if (!node.hasTags() || !bounds.containsRaw(point)) return@read
             val geo = GeoPoint(node.lat, node.lon)
-            collectFeature(node, geo, 0.0, pois, addresses)
+            collectFeature(node, geo, 0.0, pois, addresses, amenities)
             val name = PlaceTags.name(node)
             val place = node.getTag("place")
             if (name != null && place != null && place in PlaceTags.PLACES) places += OsmPlaceNode(name, place, geo)
@@ -131,7 +135,7 @@ class OsmPlaceScan(
             val closed = ids.size >= 4 && ids.first() == ids.last()
             if (points.size * 2 < ids.size) return@read // mostly outside the stored area
             val centre = centroid(points)
-            if (centre in bounds) collectFeature(way, centre, if (closed) Geometry.areaM2(points) else 0.0, pois, addresses)
+            if (centre in bounds) collectFeature(way, centre, if (closed) Geometry.areaM2(points) else 0.0, pois, addresses, amenities)
         }
 
         // 4. Nodes again: the rest of every boundary that touches the region.
@@ -163,12 +167,21 @@ class OsmPlaceScan(
         }
         out.println(
             "OSM: ${streets.size} troços de ruas, ${pois.size} pontos de interesse, ${addresses.size} moradas, " +
-                "${places.size} localidades, ${adminAreas.count { it.level == 7 }} concelhos e ${adminAreas.count { it.level == 8 }} freguesias",
+                "${places.size} localidades, ${adminAreas.count { it.level == 7 }} concelhos e ${adminAreas.count { it.level == 8 }} freguesias, " +
+                "${amenities.size} equipamentos (bebedouros, estacionamento…)",
         )
-        return OsmPlaces(streets, pois, addresses, places, adminAreas, dataDate)
+        return OsmPlaces(streets, pois, addresses, places, adminAreas, dataDate, amenities)
     }
 
-    private fun collectFeature(e: ReaderElement, point: GeoPoint, areaM2: Double, pois: MutableList<OsmPoi>, addresses: MutableList<OsmAddress>) {
+    private fun collectFeature(
+        e: ReaderElement,
+        point: GeoPoint,
+        areaM2: Double,
+        pois: MutableList<OsmPoi>,
+        addresses: MutableList<OsmAddress>,
+        amenities: MutableList<Poi>,
+    ) {
+        PoiCatalog.unnamedKind(e)?.let { amenities += Poi(it, PlaceTags.name(e), point) }
         val name = PlaceTags.name(e)
         if (name != null && !e.hasTag("place")) {
             PlaceTags.category(e)?.let { pois += OsmPoi(name, it, point, PlaceTags.importance(e, it, areaM2), PlaceTags.altNames(e)) }

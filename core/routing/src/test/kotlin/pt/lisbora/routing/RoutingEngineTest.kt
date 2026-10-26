@@ -14,6 +14,7 @@ import pt.lisbora.routing.graph.SurfaceKind
 import pt.lisbora.routing.graph.TravelMode
 import pt.lisbora.routing.eta.BikeType
 import pt.lisbora.routing.eta.RiderProfile
+import pt.lisbora.routing.weighting.RouteBias
 import pt.lisbora.routing.weighting.RoutingPreferences
 import pt.lisbora.routing.weighting.TripPurpose
 import kotlin.random.Random
@@ -376,6 +377,9 @@ class RoutingEngineTest {
                         stress = random.nextInt(1, 5),
                         tram = random.nextDouble() < 0.1,
                         signals = random.nextDouble() < 0.1,
+                        riverside = random.nextDouble() < 0.2,
+                        green = random.nextDouble() < 0.2,
+                        viewpoint = random.nextDouble() < 0.1,
                     )
                 }
             }
@@ -388,6 +392,8 @@ class RoutingEngineTest {
             purpose = TripPurpose.entries[seed % TripPurpose.entries.size],
             maxGradePercent = 6.0,
             preferSegregated = seed % 2 == 0,
+            // Descobrir's biases lower some costs below 1: the heuristic must account for them.
+            bias = if (seed % 3 == 0) RouteBias(riverside = 0.5, green = 0.7, viewpoint = 0.6, climb = 0.45) else RouteBias.NEUTRAL,
         )
         repeat(10) {
             val from = engine.snap(g.at(random.nextDouble(0.0, 1300.0), random.nextDouble(0.0, 1300.0)), preferences) ?: return@repeat

@@ -14,6 +14,7 @@ import pt.lisbora.R
 import pt.lisbora.data.map.MapData
 import pt.lisbora.data.map.MapDataRepository
 import pt.lisbora.feature.map.CycleSegment
+import pt.lisbora.feature.map.PoiLayer
 import pt.lisbora.feature.map.RecenterResult
 import javax.inject.Inject
 
@@ -26,6 +27,8 @@ sealed interface MapLoadState {
 data class HomeUiState(
     val map: MapLoadState = MapLoadState.Loading,
     val cycleNetworkVisible: Boolean = true,
+    /** Point-of-interest layers switched on in the legend. */
+    val poiLayers: Set<PoiLayer> = emptySet(),
     val legendExpanded: Boolean = false,
     val selectedSegment: CycleSegment? = null,
     val locationPermissionGranted: Boolean = false,
@@ -35,7 +38,6 @@ data class HomeUiState(
 )
 
 enum class HomeMessage(@param:StringRes val textRes: Int) {
-    DiscoverComingSoon(R.string.home_discover_coming_soon),
     LocationPermissionDenied(R.string.message_location_denied),
     OutsideServiceArea(R.string.message_outside_area),
     LocationUnavailable(R.string.message_location_unavailable),
@@ -65,8 +67,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onDiscoverClick() = showMessage(HomeMessage.DiscoverComingSoon)
-
     fun onMessageShown() {
         _uiState.update { it.copy(pendingMessage = null) }
     }
@@ -79,6 +79,10 @@ class HomeViewModel @Inject constructor(
         _uiState.update {
             it.copy(cycleNetworkVisible = visible, selectedSegment = if (visible) it.selectedSegment else null)
         }
+    }
+
+    fun onPoiLayerChange(layer: PoiLayer, visible: Boolean) {
+        _uiState.update { it.copy(poiLayers = if (visible) it.poiLayers + layer else it.poiLayers - layer) }
     }
 
     fun onSegmentClick(segment: CycleSegment?) {

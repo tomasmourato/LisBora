@@ -69,7 +69,7 @@ Versões: na implementação vou buscar a última estável nas páginas oficiais
   - `InstructionBuilder` em pt-PT
 
   É partilhado pela app e pelo pipeline.
-- `:pipeline` — aplicação CLI em Kotlin/JVM que depende do `graphhopper-core` 11.1 e do JTS. Configuração em `pipeline/config/`: `golden-routes.json` (rotas de referência). Previstos: `region.geojson` (hoje a região é o retângulo `ServiceArea`) e `overrides.geojson` (correções manuais).
+- `:pipeline` — aplicação CLI em Kotlin/JVM que depende do `graphhopper-core` 11.1 e do JTS. Configuração em `pipeline/config/`: `golden-routes.json` (rotas de referência), `golden-searches.json` (pesquisas de referência) e `golden-discoveries.json` (descobertas de referência). Previstos: `region.geojson` (hoje a região é o retângulo `ServiceArea`) e `overrides.geojson` (correções manuais).
 - `:app` — Android, com pacotes por funcionalidade:
   - `feature/map`, `feature/search`, `feature/planner`, `feature/discover`, `feature/navigation`, `feature/saved`, `feature/settings`, `feature/about`
   - `data/` com os repositórios
@@ -220,6 +220,15 @@ Cada fase termina com build, testes, instalação e execução no emulador e uma
 4. **Descobrir**
    - UI (duração, motivo, circular ou A→B), `DiscoveryEngine`, chips explicativos, "Outra rota" e guardar.
    - Camada de POIs.
+   - **Feito (26/10/2026).**
+     - Atributos cénicos no grafo (`build`): uma aresta fica "junto ao rio" se pelo menos metade dela está a menos de 70 m da margem (linha de costa do Tejo e docas e lagos largos), "verde" se pelo menos metade está dentro de um parque, jardim ou mata, e "miradouro" se passa a menos de 40 m de um `tourism=viewpoint`. Resultado: 129 km junto ao rio, 1029 km verdes (a maior parte em Monsanto e na margem da região) e 1194 arestas junto a miradouros; o QA escreve `qa/scenery.geojson` para ver no mapa.
+     - `pois.geojson` (`search`, 0,7 MB): 5149 pontos de interesse do OSM sem duplicados (58 miradouros, 537 parques e jardins, 785 parques infantis, 128 museus, 672 monumentos, 212 atrações, 21 praias, 614 bebedouros, 1860 estacionamentos de bicicletas, 208 estações GIRA, 44 lojas e 10 estações de reparação).
+     - `DiscoveryEngine`: o tempo passa a uma distância em linha reta medida em 4 voltas de calibração à volta da partida; depois ~20 candidatas (passeios por 1 a 3 POIs ou pontos cénicos escolhidos por beam search, e voltas ou elipses com pontos virtuais; um ponto virtual fora da rede, no rio ou fora da região, é puxado para dentro). Cada candidata é calculada com `routeVia` (A* com peso 1,5, sem inversões nas paragens e com as ruas já feitas 1,3 a 2,5 vezes mais caras), as que falham o tempo são redimensionadas uma vez, e ficam as 3 melhores com sobreposição de Jaccard ≤ 0,5. O motivo muda os pesos do router (`RouteBias`: rio, verde, miradouros, subidas), as restrições (família e descidas: máx. 6%, sem calçada) e a pontuação.
+     - Descobertas de referência em `pipeline/config/golden-discoveries.json` (`pipeline discover`): as 10 passam. Numa amostra de 200 descobertas aleatórias no centro, a melhor rota fica a ±12% do tempo pedido em 100% dos casos (erro médio 3%) e repete 5% do percurso; o cálculo demora 0,26 s de mediana no PC com 4 fios (0,77 s com 1). No emulador, com o build de debug, demora 0,8 a 3 s com 3 fios, e o motor fica pronto em ~1,1 s ao abrir o Descobrir.
+     - App: o botão "Descobrir" abre as escolhas (volta ou até um destino, 20 min a 2 h, 8 motivos), a partir da localização, de uma pesquisa ou de uma pressão longa. Cada rota mostra até 3 razões ("8,5 km junto ao rio", "2 miradouros", "55% em ciclovia segregada", "Quase plana"…), os locais por onde passa (com nome no mapa) e os mesmos detalhes do A→B. "Outra rota" usa outra semente e evita as rotas já mostradas; "Mais rio" e "Menos subidas" ajustam o motivo. As rotas guardadas ficam no Room (só as paragens, o motivo e os ajustes) e são calculadas de novo com os dados do dia.
+     - Camada de POIs na legenda, com quatro interruptores: miradouros, jardins e museus (com nome a partir do zoom 14,5), bebedouros, estacionamento de bicicletas, e GIRA e oficinas.
+     - Opção "Bicicleta GIRA": os termos da GIRA (cláusula 4(o)) só deixam circular dentro do concelho de Lisboa. O grafo marca as arestas do concelho (fronteira administrativa do OSM, `admin_level=7`; 2992 km), e com `stayInLisbon` o router não usa as outras nem o Descobrir faz paragens fora. A rota começa na estação GIRA mais próxima da partida (a até 1,5 km a pé) e acaba na mesma ou, até um destino, na estação mais próxima dele; usa o modelo de bicicleta elétrica. As ~196 estações vêm do OSM, no `pois.geojson`. As rotas com bicicleta própria continuam a poder sair do concelho.
+     - Disponibilidade GIRA em tempo real: o feed aberto da EMEL (`opendata.emel.pt`) está em baixo. Desde 2026 a GIRA usa a plataforma VAIMOO, e a app oficial lê bicicletas e docas de uma base Firestore com a chave dessa app (203 estações). Por decisão do utilizador, a LisBora lê a mesma base (`VaimooGiraFeed`, com a exceção registada no `CLAUDE.md`), só no modo GIRA, guardando os dados durante 1 minuto. A estação de partida é a mais próxima com bicicletas e em serviço; a de chegada, a mais próxima do destino com docas livres. O mapa mostra a cinzento as estações sem bicicletas, e os resultados dizem quantas bicicletas e docas há. Sem rede (ou se a EMEL fechar a API) usa os últimos dados em direto ou as estações do pacote, e avisa que não há dados em tempo real. A app passou a pedir a permissão de Internet só para isto.
 5. **Seguir rota**
    - Modo navegação, instruções pt-PT, recálculo e resumo.
    - GPX e calibração pessoal do ETA.
@@ -234,7 +243,7 @@ Cada fase termina com build, testes, instalação e execução no emulador e uma
 Para o futuro, opcional:
 - Supabase (sincronização e partilha)
 - correções de contrassentido com lista manual
-- disponibilidade GIRA em tempo real, se houver API aberta
+- disponibilidade GIRA em tempo real (ver o fim da Fase 4)
 - "pôr do sol nos miradouros"
 - relatórios de perigos
 

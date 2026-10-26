@@ -50,5 +50,9 @@ object GraphExport {
         stress = e.stress,
         maxSpeedKmh = e.maxSpeedKmh,
         lanes = e.lanes,
+        riverside = e.riverside,
+        green = e.green,
+        viewpoint = e.viewpoint,
+        lisbon = e.lisbon,
     )
 }

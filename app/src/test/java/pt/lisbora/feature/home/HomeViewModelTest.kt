@@ -16,6 +16,7 @@ import pt.lisbora.data.datapack.CycleNetworkMeta
 import pt.lisbora.data.map.MapData
 import pt.lisbora.data.map.MapDataRepository
 import pt.lisbora.feature.map.CycleSegment
+import pt.lisbora.feature.map.PoiLayer
 import pt.lisbora.feature.map.RecenterResult
 import pt.lisbora.routing.model.CycleInfraClass
 import java.io.IOException
@@ -68,6 +69,16 @@ class HomeViewModelTest {
 
         vm.onSegmentDismiss()
         assertNull(vm.uiState.value.selectedSegment)
+    }
+
+    @Test
+    fun `point-of-interest layers switch on and off one by one`() {
+        val vm = viewModel()
+        assertTrue(vm.uiState.value.poiLayers.isEmpty())
+        vm.onPoiLayerChange(PoiLayer.DRINKING_WATER, true)
+        vm.onPoiLayerChange(PoiLayer.PLACES, true)
+        vm.onPoiLayerChange(PoiLayer.DRINKING_WATER, false)
+        assertEquals(setOf(PoiLayer.PLACES), vm.uiState.value.poiLayers)
     }
 
     @Test

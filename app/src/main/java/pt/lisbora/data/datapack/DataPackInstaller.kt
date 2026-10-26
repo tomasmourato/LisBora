@@ -112,5 +112,6 @@ class DataPackInstaller(
         const val GRAPH_FILE = GraphFormat.FILE_NAME
         const val GRAPH_META_FILE = "graph.meta.json"
         const val SEARCH_FILE = SearchIndexFormat.FILE_NAME
+        const val POIS_FILE = "pois.geojson"
     }
 }

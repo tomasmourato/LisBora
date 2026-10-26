@@ -25,6 +25,10 @@ class EdgeFlagsTest {
             stress = 3,
             maxSpeedKmh = 50,
             lanes = 2,
+            riverside = true,
+            green = false,
+            viewpoint = true,
+            lisbon = true,
         )
         assertEquals(TravelMode.RIDE, flags.mode(reverse = false))
         assertEquals(TravelMode.PUSH, flags.mode(reverse = true))
@@ -36,6 +40,8 @@ class EdgeFlagsTest {
         assertEquals(3, flags.stress)
         assertEquals(50, flags.maxSpeedKmh)
         assertEquals(2, flags.lanes)
+        assertTrue(flags.riverside && flags.viewpoint && flags.lisbon)
+        assertFalse(flags.green)
     }
 
     @Test
@@ -58,6 +64,7 @@ class EdgeFlagsTest {
         assertEquals(4, flags.stress)
         assertEquals(EdgeFlags.MAX_SPEED_KMH, flags.maxSpeedKmh)
         assertEquals(EdgeFlags.MAX_LANES, flags.lanes)
+        assertFalse(flags.riverside || flags.green || flags.viewpoint || flags.lisbon)
         assertEquals(0L, flags.bits ushr 31)
     }
 

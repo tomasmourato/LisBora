@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "dataVersion": "20261025T2344Z",
+  "dataVersion": "20261026T1443Z",
   "bbox": "-9.3,38.655,-9.05,38.83",
   "license": "ODbL (base de dados derivada do OpenStreetMap)",
   "attribution": "© OpenStreetMap contributors (ODbL)",
@@ -45,6 +45,20 @@
       "HOTEL": 703,
       "PUBLIC_SERVICE": 624,
       "OTHER": 5376
+    },
+    "poisByKind": {
+      "viewpoint": 58,
+      "park": 537,
+      "playground": 785,
+      "beach": 21,
+      "museum": 128,
+      "monument": 672,
+      "attraction": 212,
+      "drinking_water": 614,
+      "bike_parking": 1860,
+      "bike_share": 208,
+      "bike_shop": 44,
+      "bike_repair": 10
     }
   }
 }

@@ -34,8 +34,9 @@ object CycleNetworkLayers {
 
 /**
  * Builds the final MapLibre style: points the Protomaps source at the installed basemap and inserts
- * the cycle-network and route layers below the first label layer, so street names stay readable on top.
- * Route markers go above everything. Pure JSON manipulation, so it is unit-testable on the JVM.
+ * the cycle-network, point-of-interest and route layers below the first label layer, so street names
+ * stay readable on top. Place names and route markers go above everything. The point-of-interest layers
+ * start hidden (the legend switches them on). Pure JSON manipulation, so it is unit-testable on the JVM.
  */
 object MapStyleComposer {
 
@@ -48,6 +49,8 @@ object MapStyleComposer {
         cycleAttribution: String,
         palette: CycleNetworkPalette,
         routeAttribution: String? = null,
+        poisPath: String? = null,
+        poiPalette: PoiPalette = PoiPalette.Light,
     ): String {
         val style = Json.parseToJsonElement(baseStyle).jsonObject
         val baseSources = style.getValue("sources").jsonObject
@@ -73,13 +76,21 @@ object MapStyleComposer {
                 routeAttribution?.let { put("attribution", it) }
             }
             putJsonObject(RouteLayers.MARKER_SOURCE) { emptyGeoJson() }
+            if (poisPath != null) {
+                putJsonObject(PoiLayer.SOURCE) {
+                    put("type", "geojson")
+                    put("data", "file://$poisPath")
+                }
+            }
         }
 
         val keptLayers = baseLayers.filter { basemapPath != null || it.sourceId() != BASEMAP_SOURCE }
         val firstLabel = keptLayers.indexOfFirst { it["type"]?.jsonPrimitive?.contentOrNull == "symbol" }
             .takeIf { it >= 0 } ?: keptLayers.size
-        val layers = keptLayers.take(firstLabel) + cycleLayers(palette) + routeLayers(palette) +
-            keptLayers.drop(firstLabel) + markerLayer(palette)
+        val poiLayers = if (poisPath != null) poiLayers(palette, poiPalette) else emptyList()
+        val poiLabels = if (poisPath != null) listOf(poiLabelLayer(poiPalette)) else emptyList()
+        val layers = keptLayers.take(firstLabel) + cycleLayers(palette) + poiLayers + routeLayers(palette) +
+            keptLayers.drop(firstLabel) + poiLabels + markerLayer(palette) + markerLabelLayer(poiPalette)
 
         return JsonObject(style + mapOf("sources" to sources, "layers" to JsonArray(layers))).toString()
     }
@@ -130,6 +141,102 @@ object MapStyleComposer {
             put("circle-radius", buildJsonArray { add(JsonPrimitive("get")); add(JsonPrimitive("radius")) })
             put("circle-stroke-color", palette.casing)
             put("circle-stroke-width", 2.5)
+        }
+    }
+
+    /** Names of the route's places (Descobrir), next to their markers. */
+    private fun markerLabelLayer(poiPalette: PoiPalette) = labelLayer(
+        id = RouteLayers.MARKER_LABELS,
+        source = RouteLayers.MARKER_SOURCE,
+        filter = buildJsonArray { add(JsonPrimitive("has")); add(JsonPrimitive("label")) },
+        field = "label",
+        size = 12.5,
+        poiPalette = poiPalette,
+        visible = true,
+    )
+
+    /** `["in", ["get", "kind"], ["literal", [...]]]` */
+    private fun kindIn(layer: PoiLayer) = buildJsonArray {
+        add(JsonPrimitive("in"))
+        add(buildJsonArray { add(JsonPrimitive("get")); add(JsonPrimitive("kind")) })
+        add(buildJsonArray { add(JsonPrimitive("literal")); add(buildJsonArray { layer.kinds.forEach { add(JsonPrimitive(it.code)) } }) })
+    }
+
+    private fun poiLayers(palette: CycleNetworkPalette, poiPalette: PoiPalette): List<JsonObject> = PoiLayer.entries.map { layer ->
+        buildJsonObject {
+            put("id", layer.layerId)
+            put("type", "circle")
+            put("source", PoiLayer.SOURCE)
+            put("minzoom", layer.minZoom)
+            put("filter", kindIn(layer))
+            putJsonObject("layout") { put("visibility", "none") }
+            putJsonObject("paint") {
+                put("circle-color", poiPalette.color(layer))
+                put("circle-radius", zoomWidth(12 to 2.5, 15 to 4.5, 18 to 8.0))
+                put("circle-stroke-color", palette.casing)
+                put("circle-stroke-width", 1.5)
+            }
+        }
+    }
+
+    private fun poiLabelLayer(poiPalette: PoiPalette) = labelLayer(
+        id = PoiLayer.PLACES_LABELS,
+        source = PoiLayer.SOURCE,
+        filter = buildJsonArray {
+            add(JsonPrimitive("all"))
+            add(kindIn(PoiLayer.PLACES))
+            add(buildJsonArray { add(JsonPrimitive("has")); add(JsonPrimitive("name")) })
+        },
+        field = "name",
+        size = 11.0,
+        poiPalette = poiPalette,
+        visible = false,
+        minZoom = PLACE_LABELS_MIN_ZOOM,
+    )
+
+    private fun labelLayer(
+        id: String,
+        source: String,
+        filter: JsonElement,
+        field: String,
+        size: Double,
+        poiPalette: PoiPalette,
+        visible: Boolean,
+        minZoom: Double? = null,
+    ) = buildJsonObject {
+        put("id", id)
+        put("type", "symbol")
+        put("source", source)
+        minZoom?.let { put("minzoom", it) }
+        put("filter", filter)
+        putJsonObject("layout") {
+            put("visibility", if (visible) "visible" else "none")
+            put("text-field", buildJsonArray { add(JsonPrimitive("get")); add(JsonPrimitive(field)) })
+            putJsonArray("text-font") { add(JsonPrimitive(LABEL_FONT)) }
+            put("text-size", size)
+            put("text-anchor", "top")
+            putJsonArray("text-offset") { add(JsonPrimitive(0)); add(JsonPrimitive(0.8)) }
+            put("text-max-width", 9)
+            put("text-optional", true)
+            // Better-known places first when labels collide.
+            put(
+                "symbol-sort-key",
+                buildJsonArray {
+                    add(JsonPrimitive("-"))
+                    add(
+                        buildJsonArray {
+                            add(JsonPrimitive("coalesce"))
+                            add(buildJsonArray { add(JsonPrimitive("get")); add(JsonPrimitive("importance")) })
+                            add(JsonPrimitive(0))
+                        },
+                    )
+                },
+            )
+        }
+        putJsonObject("paint") {
+            put("text-color", poiPalette.label)
+            put("text-halo-color", poiPalette.labelHalo)
+            put("text-halo-width", 1.4)
         }
     }
 
@@ -187,6 +294,10 @@ object MapStyleComposer {
         add(buildJsonArray { add(JsonPrimitive("zoom")) })
         stops.forEach { (zoom, width) -> add(JsonPrimitive(zoom)); add(JsonPrimitive(width)) }
     }
+
+    /** A font bundled with the basemap style (`assets/map/fonts`). */
+    private const val LABEL_FONT = "NotoSans-Medium"
+    private const val PLACE_LABELS_MIN_ZOOM = 14.5
 
     private val LINE_WIDTH = zoomWidth(11 to 1.0, 13 to 2.0, 15 to 3.5, 18 to 8.0)
     private val CASING_WIDTH = zoomWidth(11 to 2.2, 13 to 3.6, 15 to 6.0, 18 to 12.0)

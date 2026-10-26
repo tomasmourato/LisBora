@@ -4,7 +4,6 @@
 
     <string name="home_search_hint">Para onde vais?</string>
     <string name="home_discover">Descobrir</string>
-    <string name="home_discover_coming_soon">As rotas automáticas chegam na Fase 4.</string>
 
     <string name="map_legend_toggle">Legenda da rede ciclável</string>
     <string name="map_legend_title">Rede ciclável</string>
@@ -14,6 +13,12 @@
     <string name="map_my_location">A minha localização</string>
     <string name="map_close">Fechar</string>
     <string name="map_no_basemap">Mapa base em falta: só a rede ciclável está visível.</string>
+
+    <string name="poi_layers_title">Pontos de interesse</string>
+    <string name="poi_layer_places">Miradouros, jardins e museus</string>
+    <string name="poi_layer_water">Bebedouros</string>
+    <string name="poi_layer_parking">Estacionamento de bicicletas</string>
+    <string name="poi_layer_bike">GIRA e oficinas</string>
 
     <string name="cycle_class_segregated">Ciclovia segregada</string>
     <string name="cycle_class_lane">Faixa ciclável</string>
@@ -176,6 +181,105 @@
 
     <string name="profile_description">Perfil de elevação: de %1$s a %2$s, mínimo %3$s, máximo %4$s</string>
     <string name="profile_inspect">%1$s · %2$s · %3$s</string>
+
+    <!-- Descobrir -->
+    <string name="discover_title">Descobrir</string>
+    <string name="discover_summary">%1$s · %2$s</string>
+    <string name="discover_back">Voltar</string>
+    <string name="discover_loop">Volta</string>
+    <string name="discover_to_destination">Até um destino</string>
+    <string name="discover_time">Tempo disponível</string>
+    <string name="discover_purpose">Motivo</string>
+    <string name="discover_search">Descobrir rotas</string>
+    <string name="discover_loading">A descobrir rotas…</string>
+    <string name="discover_another">Outra rota</string>
+    <string name="discover_edit">Alterar</string>
+    <string name="discover_save">Guardar</string>
+    <string name="discover_saved_label">Guardada</string>
+    <string name="discover_saved">Rota guardada.</string>
+    <string name="discover_removed">Rota removida das guardadas.</string>
+    <string name="discover_saved_title">Rotas guardadas</string>
+    <string name="discover_saved_line">%1$s · %2$s · %3$s</string>
+    <string name="discover_saved_remove">Remover a rota guardada</string>
+    <string name="discover_saved_unavailable">Não foi possível voltar a calcular esta rota com os dados atuais.</string>
+    <string name="discover_direct_only">Não há tempo para desvios: esta é a rota mais direta.</string>
+    <string name="discover_passes">Passa por %1$s</string>
+    <string name="discover_failure_no_route">Não foi possível criar rotas a partir daqui com estas escolhas.</string>
+    <string name="discover_failure_unavailable">O Descobrir não está disponível neste momento.</string>
+    <string name="discover_gira">Bicicleta GIRA</string>
+    <string name="discover_gira_hint">De estação em estação, sem sair do concelho de Lisboa. As viagens contam por períodos de 45 min.</string>
+    <string name="discover_gira_station">estação GIRA %1$d</string>
+    <string name="discover_gira_pickup">Levanta na %1$s, a %2$s a pé</string>
+    <string name="discover_gira_pickup_here">Levanta na %1$s</string>
+    <string name="discover_gira_return_same">entrega na mesma estação</string>
+    <string name="discover_gira_return">entrega na %1$s, a %2$s do destino</string>
+    <string name="discover_gira_return_here">entrega na %1$s</string>
+    <plurals name="discover_gira_bikes">
+        <item quantity="one">%d bicicleta</item>
+        <item quantity="many">%d bicicletas</item>
+        <item quantity="other">%d bicicletas</item>
+    </plurals>
+    <plurals name="discover_gira_docks">
+        <item quantity="one">%d doca livre</item>
+        <item quantity="many">%d docas livres</item>
+        <item quantity="other">%d docas livres</item>
+    </plurals>
+    <plurals name="discover_gira_live">
+        <item quantity="one">Agora: %d estação com bicicletas (dados da EMEL)</item>
+        <item quantity="many">Agora: %d estações com bicicletas (dados da EMEL)</item>
+        <item quantity="other">Agora: %d estações com bicicletas (dados da EMEL)</item>
+    </plurals>
+    <string name="discover_gira_offline">Sem dados em tempo real: confirma as bicicletas na app GIRA.</string>
+    <string name="discover_summary_gira">%1$s · %2$s · GIRA</string>
+    <string name="discover_saved_gira">GIRA</string>
+    <string name="discover_failure_gira_start">Não há nenhuma estação GIRA com bicicletas a menos de 1,5 km da partida.</string>
+    <string name="discover_failure_gira_end">Não há nenhuma estação GIRA com docas livres a menos de 1,5 km do destino.</string>
+    <string name="discover_failure_gira_unavailable">As estações GIRA não estão disponíveis neste momento.</string>
+    <string name="discover_tweak_more_river">Mais rio</string>
+    <string name="discover_tweak_fewer_climbs">Menos subidas</string>
+    <string name="discover_minutes">%1$d min</string>
+    <string name="discover_hours">%1$d h</string>
+    <string name="discover_hours_minutes">%1$d h %2$02d</string>
+
+    <string name="discover_purpose_leisure">Lazer</string>
+    <string name="discover_purpose_scenery">Paisagens</string>
+    <string name="discover_purpose_river">Rio</string>
+    <string name="discover_purpose_sport">Desporto</string>
+    <string name="discover_purpose_climbs">Subidas</string>
+    <string name="discover_purpose_descents">Descidas</string>
+    <string name="discover_purpose_family">Família</string>
+    <string name="discover_purpose_culture">Cultura</string>
+
+    <string name="reason_riverside">%1$s junto ao rio</string>
+    <string name="reason_green">%1$s em parques</string>
+    <plurals name="reason_viewpoints">
+        <item quantity="one">%d miradouro</item>
+        <item quantity="many">%d miradouros</item>
+        <item quantity="other">%d miradouros</item>
+    </plurals>
+    <plurals name="reason_culture">
+        <item quantity="one">%d museu ou monumento</item>
+        <item quantity="many">%d museus e monumentos</item>
+        <item quantity="other">%d museus e monumentos</item>
+    </plurals>
+    <plurals name="reason_parks">
+        <item quantity="one">%d jardim</item>
+        <item quantity="many">%d jardins</item>
+        <item quantity="other">%d jardins</item>
+    </plurals>
+    <plurals name="reason_playgrounds">
+        <item quantity="one">%d parque infantil</item>
+        <item quantity="many">%d parques infantis</item>
+        <item quantity="other">%d parques infantis</item>
+    </plurals>
+    <string name="reason_segregated">%1$s em ciclovia segregada</string>
+    <string name="reason_infra">%1$s com ciclovia</string>
+    <string name="reason_calm">%1$s em ruas calmas</string>
+    <string name="reason_climb">Sobe %1$s</string>
+    <string name="reason_descent">Desce %1$s</string>
+    <string name="reason_ends_lower">Acaba %1$s mais abaixo</string>
+    <string name="reason_flat">Quase plana</string>
+    <string name="reason_gentle">Subidas suaves</string>
 
     <!-- Preferências -->
     <string name="prefs_title">Preferências de rota</string>
