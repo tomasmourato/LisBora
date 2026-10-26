@@ -1,6 +1,6 @@
-# Publicar na Google Play
+# Publicar a LisBora
 
-O que já está feito no projeto e o que falta fazer na Play Console. As regras da Google Play mudam: confirma cada ponto na Console antes de enviar.
+Este guia explica a chave de release, como publicar um APK no GitHub, o que já está feito no projeto e o que falta fazer na Play Console. As regras da Google Play mudam: confirma cada ponto na Console antes de enviar.
 
 ## No projeto (feito)
 
@@ -9,33 +9,66 @@ O que já está feito no projeto e o que falta fazer na Play Console. As regras 
 - Política de privacidade em [docs/PRIVACIDADE.md](PRIVACIDADE.md), também em "Sobre a LisBora" na app. Endereço público: `https://github.com/tomasmourato/LisBora/blob/main/docs/PRIVACIDADE.md`.
 - Licenças de código aberto e atribuição dos dados no ecrã "Sobre a LisBora".
 - Cópia de segurança do Android sem os pacotes de dados (passariam o limite de 25 MB).
+- Chave de release criada e primeiro APK publicado no GitHub ([v0.1.0](https://github.com/tomasmourato/LisBora/releases/tag/v0.1.0)).
 
-## Chave de upload e App Bundle
+## Chave de release
 
-1. Cria a chave de upload fora do repositório e guarda-a com uma cópia de segurança:
+A chave foi criada a 26/10/2026, para o primeiro APK publicado no GitHub (v0.1.0), e está fora do repositório:
+
+- Ficheiro: `C:/Users/mrttm/lisbora-release.jks` (PKCS12, alias `lisbora`, RSA 4096, válida por 10 000 dias).
+- Certificado: `CN=LisBora, C=PT`, com o SHA-256 `d6:86:7b:c1:5c:3e:08:02:71:6a:78:c1:d4:69:2b:8f:50:66:45:95:75:96:2f:21:11:19:3a:7b:c8:00:17:2d`.
+- Palavra-passe: é a mesma para o ficheiro e para a chave, e está só em `~/.gradle/gradle.properties` (nunca no repositório):
+
+  ```properties
+  lisbora.signing.storeFile=C:/Users/mrttm/lisbora-release.jks
+  lisbora.signing.storePassword=...
+  lisbora.signing.keyAlias=lisbora
+  lisbora.signing.keyPassword=...
+  ```
+
+Guarda uma cópia dos dois ficheiros fora do PC. **Não cries outra chave.** Um telemóvel só aceita uma versão nova da app assinada com a mesma chave. Se a chave se perder, quem tem a app tem de a desinstalar, e perde os favoritos e as rotas guardadas.
+
+Sem estas propriedades (noutro PC ou no CI), o release é assinado com a chave de debug. Esse APK serve para testar, mas não se instala por cima do APK publicado e a Play recusa-o. O release e o debug também não se instalam um por cima do outro: desinstala o que lá está primeiro.
+
+## Publicar um APK no GitHub
+
+1. Sobe o `versionCode` (sempre mais 1) e o `versionName` em `app/build.gradle.kts`. Faz o commit e o push na `main`.
+2. Compila:
 
    ```bash
-   keytool -genkeypair -v -keystore ~/lisbora-upload.jks -alias lisbora -keyalg RSA -keysize 4096 -validity 10000
+   ./gradlew :app:assembleRelease
    ```
 
-2. Em `~/.gradle/gradle.properties` (nunca no repositório):
+   O APK fica em `app/build/outputs/apk/release/app-release.apk`.
 
-   ```properties
-   lisbora.signing.storeFile=C:/Users/<utilizador>/lisbora-upload.jks
-   lisbora.signing.storePassword=...
-   lisbora.signing.keyAlias=lisbora
-   lisbora.signing.keyPassword=...
+3. Confirma a assinatura. O comando tem de mostrar `CN=LisBora, C=PT` e o SHA-256 da secção anterior:
+
+   ```bash
+   "$ANDROID_HOME/build-tools/<versão>/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
    ```
 
-   Sem estas propriedades, o release é assinado com a chave de debug: serve para testar, mas a Play recusa-o.
+4. Experimenta-o no emulador: instala-o, abre-o, faz uma pesquisa e calcula uma rota. É aí que o R8 pode partir alguma coisa.
+5. Escreve as notas do release em pt-PT, com as do [v0.1.0](https://github.com/tomasmourato/LisBora/releases/tag/v0.1.0) como modelo: o que mudou, como instalar, o SHA-256 do APK (`sha256sum`) e o do certificado, e as licenças.
+6. Copia o APK com o nome da versão e cria o release. Usa o SHA completo do commit na tag, porque o GitHub recusa um SHA abreviado:
 
-3. Sobe o `versionCode` (e o `versionName`) em `app/build.gradle.kts` a cada envio e gera o bundle:
+   ```bash
+   cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/LisBora-0.2.0.apk
+   gh release create v0.2.0 app/build/outputs/apk/release/LisBora-0.2.0.apk --target "$(git rev-parse HEAD)" --title "LisBora 0.2.0" --notes-file notas.md --latest
+   ```
+
+Não mexas no release `datapack`: é um pré-lançamento à parte, de onde a app descarrega os dados novos, e é gerido pelo workflow Dados.
+
+## App Bundle para a Play
+
+1. Sobe o `versionCode` (e o `versionName`) em `app/build.gradle.kts` a cada envio e gera o bundle:
 
    ```bash
    ./gradlew :app:bundleRelease
    ```
 
-   O ficheiro fica em `app/build/outputs/bundle/release/app-release.aab`. Usa a assinatura de apps da Play: a Google guarda a chave de assinatura da app e a chave acima só serve para os envios.
+   O ficheiro fica em `app/build/outputs/bundle/release/app-release.aab`.
+
+2. Na primeira vez, a Play Console pede para configurar a assinatura de apps da Play. Escolhe usar a chave acima como chave de assinatura da app, em vez de deixares a Google gerar uma; a Console explica como a exportar. Assim, a versão da Play instala-se por cima da do GitHub, e o contrário também.
 
 ## Na Play Console
 

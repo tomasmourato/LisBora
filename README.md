@@ -56,7 +56,7 @@ Para verificar o Descobrir no grafo real (descobertas de referência, com tempos
 
 A app traz o grafo, o índice, os pontos de interesse e as estações GIRA no pacote embutido (`app/src/main/assets/datapack`). Para os atualizar, usa `--out app/src/main/assets/datapack` em `build`, `search` e `gira`.
 
-Para o release (`:app:assembleRelease` ou `:app:bundleRelease`), o perfil de arranque e a publicação na Google Play, ver [docs/PLAY_STORE.md](docs/PLAY_STORE.md).
+Para o release (`:app:assembleRelease` ou `:app:bundleRelease`), a chave de assinatura, a publicação de um APK nos [releases do GitHub](https://github.com/tomasmourato/LisBora/releases) e na Google Play, e o perfil de arranque, ver [docs/PLAY_STORE.md](docs/PLAY_STORE.md).
 
 Depois de instalada, a app atualiza os dados sozinha: o workflow [Dados](.github/workflows/data.yml) reconstrói o pacote às segundas, corre as verificações de qualidade e, se os dados mudaram, publica-o no release `datapack`. A app descarrega só os ficheiros que mudaram e passa a usá-los no arranque seguinte.
 
