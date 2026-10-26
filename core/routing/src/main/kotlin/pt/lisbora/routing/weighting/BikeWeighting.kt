@@ -132,10 +132,18 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
             val overlap = min(end, to) - max(start, from)
             if (overlap > 0) {
                 val grade = graph.segmentGrade(edge, i).let { if (reverse) -it else it }
-                val speed = speed(flags, mode, grade)
-                var seconds = overlap / speed
-                if (wantCost) seconds *= gradeFactor(flags, grade)
-                total += seconds
+                var seconds = overlap / speed(flags, mode, grade)
+                var multiplier = gradeFactor(flags, mode, grade)
+                if (mode == TravelMode.RIDE && isRough(flags) && -grade > ROUGH_DESCENT_STEEP) {
+                    // A careful rider walks down a very steep cobbled street: never count more than that,
+                    // and use the walking time for the ETA when walking is the better choice.
+                    val walking = overlap / rider.walkingSpeed(grade)
+                    if (walking * PUSH_FACTOR < seconds * multiplier) {
+                        seconds = walking
+                        multiplier = PUSH_FACTOR
+                    }
+                }
+                total += if (wantCost) seconds * multiplier else seconds
             }
             start = end
             if (start >= to) break
@@ -197,12 +205,14 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
         EdgeInfra.NONE -> STRESS_FACTORS[stress - 1] * if (preferences.preferSegregated) 1.15 else 1.0
     }
 
-    /** Extra multiplier for the grade of a segment in the direction of travel. */
-    private fun gradeFactor(flags: EdgeFlags, grade: Double): Double {
+    /**
+     * Extra multiplier for the grade of a segment in the direction of travel: climbs above the rider's
+     * maximum, and descents ridden downhill (see [descentFactor]). Walking down is not penalised.
+     */
+    private fun gradeFactor(flags: EdgeFlags, mode: TravelMode, grade: Double): Double {
         var factor = 1.0
         if (maxGrade != null && grade > maxGrade) factor *= STEEP_CLIMB_FACTOR
-        val rough = flags.tram || flags.surface == SurfaceKind.COBBLESTONE
-        if (rough && grade < -STEEP_DESCENT_GRADE) factor *= ROUGH_DESCENT_FACTOR
+        if (mode == TravelMode.RIDE && grade < 0) factor *= descentFactor(-grade, isRough(flags))
         return factor
     }
 
@@ -211,8 +221,35 @@ class BikeWeighting(val graph: RoutingGraph, val preferences: RoutingPreferences
         val STRESS_FACTORS = doubleArrayOf(1.0, 1.2, 1.7, 2.6)
         const val PUSH_FACTOR = 2.5
         const val STEEP_CLIMB_FACTOR = 6.0
-        const val STEEP_DESCENT_GRADE = 0.08
-        const val ROUGH_DESCENT_FACTOR = 1.5
+        /** Rough descents (cobbles, tram rails) cost a little more from this grade on, as in most of Lisbon... */
+        const val ROUGH_DESCENT_FROM = 0.06
+        const val ROUGH_DESCENT_PER_PERCENT = 0.2
+
+        /** ...and much more above this one, where braking on slippery stones is what goes wrong. */
+        const val ROUGH_DESCENT_STEEP = 0.12
+        const val ROUGH_STEEP_DESCENT_PER_PERCENT = 2.0
+
+        /** Smooth descents only above this grade, and gently. */
+        const val SMOOTH_DESCENT_FROM = 0.12
+        const val SMOOTH_DESCENT_PER_PERCENT = 0.15
+
+        /** Cobbles and tram rails, where wheels slip or get caught. */
+        fun isRough(flags: EdgeFlags): Boolean = flags.tram || flags.surface == SurfaceKind.COBBLESTONE
+
+        /**
+         * Cost multiplier (at least 1) for riding down a [descent] (positive grade, rise / run). The risk grows
+         * faster than the grade: a short, very steep cobbled street must cost more than a longer moderate one,
+         * so a 9% cobbled descent costs 1.6x and an 18% one (Calçada da Glória) 14x. Time on a descent barely
+         * changes with the grade (speed is capped), so the multiplier has to carry that. Above
+         * [ROUGH_DESCENT_STEEP] the cost is capped at walking the bike down (see [evaluate]).
+         */
+        fun descentFactor(descent: Double, rough: Boolean): Double {
+            val percent = descent * 100
+            if (!rough) return 1 + SMOOTH_DESCENT_PER_PERCENT * max(0.0, percent - SMOOTH_DESCENT_FROM * 100)
+            val moderate = min(percent, ROUGH_DESCENT_STEEP * 100) - ROUGH_DESCENT_FROM * 100
+            val steep = percent - ROUGH_DESCENT_STEEP * 100
+            return 1 + ROUGH_DESCENT_PER_PERCENT * max(0.0, moderate) + ROUGH_STEEP_DESCENT_PER_PERCENT * max(0.0, steep)
+        }
         const val SHARED_PATH_MAX_MPS = 15 / 3.6
         const val TRAM_TRACKS_MAX_MPS = 25 / 3.6
         const val FERRY_SPEED_MPS = 5.0

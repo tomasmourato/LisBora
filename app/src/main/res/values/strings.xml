@@ -168,6 +168,7 @@
     <string name="hazard_cobbles">Calçada</string>
     <string name="hazard_busy_road">Trânsito intenso sem ciclovia</string>
     <string name="hazard_descent">Descida de %1$s</string>
+    <string name="hazard_descent_walk">Descida de %1$s em calçada ou carris: melhor a pé</string>
     <string name="hazard_climb">Subida de %1$s</string>
     <string name="hazard_walk">A pé com a bicicleta</string>
     <string name="hazard_ferry">Barco: horário e bilhete à parte</string>

@@ -193,6 +193,32 @@ class RoutingEngineTest {
         assertEquals(listOf(smooth), engine.success(g.at(0.0, -10.0), g.at(1000.0, -10.0), careful).edges())
     }
 
+    @Test
+    fun `goes round a steep cobbled descent, or walks it down when there is no other way`() {
+        val g = TestGraphBuilder()
+        val top = g.node(0.0, 0.0, ele = 30.0)
+        val bottom = g.node(150.0, 0.0, ele = 0.0)
+        val start = g.edge(g.node(-100.0, 0.0, ele = 30.0), top)
+        val end = g.edge(bottom, g.node(250.0, 0.0, ele = 0.0))
+        val steep = g.edge(top, bottom, surface = SurfaceKind.COBBLESTONE, name = "Calçada") // 20% down
+        val middle = g.node(0.0, 300.0, ele = 15.0)
+        val gentle = listOf(g.edge(top, middle), g.edge(middle, bottom))
+        val engine = RoutingEngine(g.build())
+
+        val around = engine.success(g.at(-50.0, 0.0), g.at(200.0, 0.0))
+        assertEquals(listOf(start) + gentle + listOf(end), around.edges())
+
+        val only = TestGraphBuilder()
+        val t = only.node(0.0, 0.0, ele = 30.0)
+        val b = only.node(150.0, 0.0, ele = 0.0)
+        only.edge(t, b, surface = SurfaceKind.COBBLESTONE)
+        val walked = RoutingEngine(only.build()).success(only.at(0.0, 0.0), only.at(150.0, 0.0))
+        // Riding down would take ~30 s; the ETA assumes walking it (~2 min).
+        assertTrue(walked.durationS > 100, "duration ${walked.durationS}")
+        assertTrue(RouteAnalysis.hazards(walked).single { it.kind == HazardKind.STEEP_DESCENT }.walkAdvised)
+        assertFalse(steep in around.edges())
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `routes along a single edge in either direction`(backwards: Boolean) {

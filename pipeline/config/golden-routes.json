@@ -33,6 +33,30 @@
       "expect": { "usesFerry": true, "avoidNames": ["Ponte 25 de Abril"] }
     },
     {
+      "name": "São Pedro de Alcântara → Torre de Belém (desce a Glória a pé)",
+      "from": [38.7139, -9.1427],
+      "to": [38.6916, -9.2160],
+      "expect": { "minInfraShare": 0.6, "maxDurationMin": 50 }
+    },
+    {
+      "name": "Largo de Camões → Cais do Sodré sem descida íngreme em calçada",
+      "from": [38.7106, -9.1434],
+      "to": [38.7060, -9.1450],
+      "expect": { "maxRoughDescentPercent": 10, "maxDurationMin": 8 }
+    },
+    {
+      "name": "Largo da Graça → Praça da Figueira a descer",
+      "from": [38.7168, -9.1312],
+      "to": [38.7139, -9.1382],
+      "expect": { "maxRoughDescentPercent": 14, "maxDurationMin": 15 }
+    },
+    {
+      "name": "Príncipe Real → Avenida da Liberdade",
+      "from": [38.7167, -9.1485],
+      "to": [38.7190, -9.1440],
+      "expect": { "maxRoughDescentPercent": 8, "maxDurationMin": 10 }
+    },
+    {
       "name": "Gare do Oriente → Oceanário",
       "from": [38.7678, -9.0995],
       "to": [38.7633, -9.0937],

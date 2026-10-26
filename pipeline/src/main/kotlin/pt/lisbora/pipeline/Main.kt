@@ -36,7 +36,7 @@ internal val USAGE = """
       build [--out DIR] [--osm FICHEIRO] [--refresh-osm sim] [--cml FICHEIRO] [--dem-zoom N]
                               Constrói o grafo de rotas (graph.lbg) a partir do OSM, da rede da CML
                               e da elevação, com relatório QA em $WORK_DIR/qa. Só escreve se o QA passar.
-      golden-routes [--graph FICHEIRO] [--detalhe sim]
+      golden-routes [--graph FICHEIRO] [--detalhe sim] [--amostra N]
                               Verifica as rotas de referência (${GoldenConfig.DEFAULT_FILE}).
                               O build guarda sempre o grafo candidato em $WORK_DIR/${BuildGraphCommand.CANDIDATE_FILE}.
       search [--out DIR] [--osm FICHEIRO] [--refresh-osm sim] [--mostrar TEXTO]
@@ -104,6 +104,7 @@ internal fun run(args: List<String>, out: PrintStream): Int {
             graphFile = Path(options["graph"] ?: "$DEFAULT_PACK_DIR/${GraphFormat.FILE_NAME}"),
             configFile = Path(GoldenConfig.DEFAULT_FILE),
             detailed = options["detalhe"] == "sim",
+            sample = options["amostra"]?.toIntOrNull() ?: 0,
         )
         else -> {
             out.println("Comando desconhecido: $command")

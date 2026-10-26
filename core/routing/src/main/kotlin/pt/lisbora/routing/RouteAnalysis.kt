@@ -4,6 +4,7 @@ import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.graph.EdgeInfra
 import pt.lisbora.routing.graph.SurfaceKind
 import pt.lisbora.routing.graph.TravelMode
+import pt.lisbora.routing.weighting.BikeWeighting
 import kotlin.math.max
 
 /** Things along a route the rider should know about. None of them makes the rest of the route "safe". */
@@ -39,6 +40,8 @@ data class RouteHazard(
     val point: GeoPoint,
     /** Steepest grade of a climb or descent, in percent (positive). */
     val gradePercent: Double? = null,
+    /** A descent too steep to ride on cobbles or tram rails: the ETA assumes walking it down. */
+    val walkAdvised: Boolean = false,
 ) {
     val lengthM: Double get() = endM - startM
 }
@@ -83,7 +86,11 @@ object RouteAnalysis {
         stretches += gradeStretches(route, climb = false)
         return stretches
             .filter { it.end - it.start >= MIN_LENGTH_M.getValue(it.kind) }
-            .map { RouteHazard(it.kind, it.start, it.end, pointAt(route, it.start), it.grade?.let { g -> g * 100 }) }
+            .map { s ->
+                val walk = s.kind == HazardKind.STEEP_DESCENT && (s.grade ?: 0.0) > BikeWeighting.ROUGH_DESCENT_STEEP &&
+                    route.legs.any { it.mode == TravelMode.RIDE && BikeWeighting.isRough(it.flags) && it.startM < s.end && it.endM > s.start }
+                RouteHazard(s.kind, s.start, s.end, pointAt(route, s.start), s.grade?.let { g -> g * 100 }, walk)
+            }
             .sortedWith(compareBy({ it.startM }, { it.kind.ordinal }))
     }
 
@@ -115,6 +122,22 @@ object RouteAnalysis {
             result[i] = if (run > 0) (e[j] - e[from]) / run else 0.0
         }
         return result
+    }
+
+    /**
+     * Steepest descent ridden on cobbles or tram rails, in percent (positive), measured over [windowM]
+     * like the route's maximum grade; 0 when the route never rides down such a stretch.
+     */
+    fun steepestRoughDescentPercent(route: Route, windowM: Double = 30.0): Double {
+        val grades = grades(route, windowM)
+        var steepest = 0.0
+        route.legs.forEachIndexed { l, leg ->
+            val rough = leg.flags.tram || leg.flags.surface == SurfaceKind.COBBLESTONE
+            if (!rough || leg.mode != TravelMode.RIDE) return@forEachIndexed
+            val end = route.legs.getOrNull(l + 1)?.firstPoint ?: route.points.lastIndex
+            for (i in leg.firstPoint until end) steepest = max(steepest, -grades[i])
+        }
+        return steepest * 100
     }
 
     /** The point at [distance] metres along [route], interpolated between its shape points. */

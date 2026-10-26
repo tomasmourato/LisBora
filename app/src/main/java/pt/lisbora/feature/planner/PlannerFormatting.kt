@@ -105,7 +105,10 @@ fun RouteHazard.title(): String = when (kind) {
     HazardKind.TRAM_TRACKS -> stringResource(R.string.hazard_tram)
     HazardKind.COBBLES -> stringResource(R.string.hazard_cobbles)
     HazardKind.BUSY_ROAD -> stringResource(R.string.hazard_busy_road)
-    HazardKind.STEEP_DESCENT -> stringResource(R.string.hazard_descent, formatGrade(gradePercent ?: 0.0))
+    HazardKind.STEEP_DESCENT -> stringResource(
+        if (walkAdvised) R.string.hazard_descent_walk else R.string.hazard_descent,
+        formatGrade(gradePercent ?: 0.0),
+    )
     HazardKind.STEEP_CLIMB -> stringResource(R.string.hazard_climb, formatGrade(gradePercent ?: 0.0))
     HazardKind.WALK -> stringResource(R.string.hazard_walk)
     HazardKind.FERRY -> stringResource(R.string.hazard_ferry)

@@ -16,6 +16,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import pt.lisbora.routing.Route
+import pt.lisbora.routing.RouteAnalysis
 import pt.lisbora.routing.RouteResult
 import pt.lisbora.routing.RoutingEngine
 import pt.lisbora.routing.geo.GeoPoint
@@ -32,6 +33,8 @@ data class RouteExpectations(
     val minDurationMin: Double? = null,
     val maxDurationMin: Double? = null,
     val maxGradePercent: Double? = null,
+    /** Steepest descent ridden on cobbles or tram rails (see [RouteAnalysis.steepestRoughDescentPercent]). */
+    val maxRoughDescentPercent: Double? = null,
     val avoidNames: List<String> = emptyList(),
     val useNames: List<String> = emptyList(),
     val usesFerry: Boolean? = null,
@@ -81,6 +84,7 @@ data class GoldenConfig(val routes: List<GoldenRoute>, val forbiddenEdgeNames: L
             minDurationMin = o.number("minDurationMin"),
             maxDurationMin = o.number("maxDurationMin"),
             maxGradePercent = o.number("maxGradePercent"),
+            maxRoughDescentPercent = o.number("maxRoughDescentPercent"),
             avoidNames = o.strings("avoidNames"),
             useNames = o.strings("useNames"),
             usesFerry = o.flag("usesFerry"),
@@ -144,6 +148,10 @@ class GoldenRouteRunner(private val graph: RoutingGraph) {
         expect.minDurationMin?.let { if (minutes < it) failures += "Duração %.1f min < %.0f min".format(minutes, it) }
         expect.maxDurationMin?.let { if (minutes > it) failures += "Duração %.1f min > %.0f min".format(minutes, it) }
         expect.maxGradePercent?.let { if (route.maxGradePercent > it) failures += "Inclinação máxima %.1f%% > %.0f%%".format(route.maxGradePercent, it) }
+        expect.maxRoughDescentPercent?.let {
+            val descent = RouteAnalysis.steepestRoughDescentPercent(route)
+            if (descent > it) failures += "Descida em calçada ou carris de %.1f%% > %.0f%%".format(descent, it)
+        }
         val names = route.legs.mapNotNull { it.name }.toSet()
         expect.avoidNames.forEach { avoid -> if (names.any { it.contains(avoid, ignoreCase = true) }) failures += "Passa por \"$avoid\"." }
         expect.useNames.forEach { use -> if (names.none { it.contains(use, ignoreCase = true) }) failures += "Não passa por \"$use\"." }
