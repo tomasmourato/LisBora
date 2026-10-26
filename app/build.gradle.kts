@@ -19,6 +19,13 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Where the app looks for data updates (the pipeline's `release`). Another address can be given
+        // for testing, e.g. -Plisbora.dataManifestUrl=http://localhost:8000/manifest.json with `adb reverse tcp:8000 tcp:8000`
+        // (debug builds allow plain HTTP to localhost only).
+        val manifestUrl = providers.gradleProperty("lisbora.dataManifestUrl")
+            .getOrElse("https://github.com/tomasmourato/LisBora/releases/download/datapack/manifest.json")
+        buildConfigField("String", "DATA_MANIFEST_URL", "\"$manifestUrl\"")
     }
 
     buildTypes {
@@ -38,6 +45,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     androidResources {
@@ -71,6 +79,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.work.runtime)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

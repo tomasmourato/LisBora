@@ -14,8 +14,15 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import pt.lisbora.BuildConfig
 import pt.lisbora.data.datapack.AssetSource
 import pt.lisbora.data.datapack.DataPackInstaller
+import pt.lisbora.data.datapack.DataPackStorage
+import pt.lisbora.data.datapack.DataPackStore
+import pt.lisbora.data.datapack.DataPackUpdater
+import pt.lisbora.data.datapack.DataUpdatesRepository
+import pt.lisbora.data.datapack.PackDataUpdatesRepository
+import pt.lisbora.data.datapack.UrlConnectionDataPackHttp
 import pt.lisbora.data.discover.DiscoveryRepository
 import pt.lisbora.data.discover.GraphDiscoveryRepository
 import pt.lisbora.data.gira.BundledGiraRepository
@@ -65,7 +72,13 @@ object DataModule {
     @Provides
     @Singleton
     fun dataPackInstaller(assets: AssetSource, @ApplicationContext context: Context): DataPackInstaller =
-        DataPackInstaller(assets, File(context.filesDir, "datapack"))
+        DataPackInstaller(assets, DataPackStorage(File(context.filesDir, "datapack")))
+
+    /** Newer data from the published packs (GitHub Releases), without a new app version. */
+    @Provides
+    @Singleton
+    fun dataPackUpdater(store: DataPackStore, clock: Clock, @IoDispatcher io: CoroutineDispatcher): DataPackUpdater =
+        DataPackUpdater(store, UrlConnectionDataPackHttp("LisBora/${BuildConfig.VERSION_NAME}"), BuildConfig.DATA_MANIFEST_URL, clock, io)
 
     @Provides
     @IoDispatcher
@@ -124,4 +137,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun gpxFiles(impl: ContentGpxFiles): GpxFiles
+
+    @Binds
+    abstract fun dataUpdatesRepository(impl: PackDataUpdatesRepository): DataUpdatesRepository
 }

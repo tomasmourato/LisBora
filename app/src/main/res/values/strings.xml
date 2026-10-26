@@ -384,6 +384,26 @@
     <string name="prefs_pace_slower">%1$d%% mais calmo do que o modelo</string>
     <string name="prefs_pace_reset">Repor</string>
 
+    <!-- Map data and its updates (preferences) -->
+    <string name="prefs_data_title">Dados do mapa</string>
+    <string name="prefs_data_updated">Versão de %1$s</string>
+    <string name="prefs_data_cycle_network">Rede ciclável da CML: editada a %1$s</string>
+    <string name="prefs_data_osm">Ruas e locais (OpenStreetMap): %1$s</string>
+    <string name="prefs_data_gira">Estações GIRA: %1$d, lista de %2$s</string>
+    <string name="prefs_data_automatic">Atualizam-se sozinhos uma vez por dia, em Wi-Fi.</string>
+    <string name="prefs_data_checked">Atualizam-se sozinhos em Wi-Fi. Última procura: %1$s.</string>
+    <string name="prefs_data_checking">A procurar dados novos…</string>
+    <string name="prefs_data_downloading">A descarregar %1$s de %2$s…</string>
+    <string name="prefs_data_up_to_date">Tens os dados mais recentes.</string>
+    <string name="prefs_data_ready">Dados novos de %1$s prontos. Entram em uso quando a app voltar a abrir.</string>
+    <string name="prefs_data_ready_undated">Dados novos prontos. Entram em uso quando a app voltar a abrir.</string>
+    <string name="prefs_data_needs_app">Há dados novos, mas precisam de uma versão mais recente da app.</string>
+    <string name="prefs_data_failed_network">Não foi possível ligar ao servidor. Tenta mais tarde.</string>
+    <string name="prefs_data_failed_space">Falta espaço no telemóvel para os dados novos.</string>
+    <string name="prefs_data_failed_corrupt">Os dados descarregados vieram incompletos. Tenta outra vez.</string>
+    <string name="prefs_data_check">Procurar dados novos</string>
+    <string name="prefs_data_restart">Reiniciar agora</string>
+
     <string name="duration_minutes">%1$d min</string>
     <string name="duration_hours">%1$d h %2$02d min</string>
 </resources>

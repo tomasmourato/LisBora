@@ -25,6 +25,19 @@ class GiraStationsTest {
     }
 
     @Test
+    fun `EMEL's list in the data pack gives number, place and docks, without live counts`() {
+        val stations = GiraGeoJson.parse(
+            """{"type":"FeatureCollection","features":[
+              {"type":"Feature","geometry":{"type":"Point","coordinates":[-9.0968,38.756199]},
+               "properties":{"number":101,"name":"101 - Alameda dos Oceanos","place":"Alameda dos Oceanos","docks":16}}
+            ]}""".trimIndent(),
+        )
+        assertEquals(listOf(GiraStation(101, "101 - Alameda dos Oceanos", GeoPoint(38.756199, -9.0968), docks = 16, place = "Alameda dos Oceanos")), stations)
+        assertEquals(false, stations.single().isLive)
+        assertEquals(true, stations.single().hasBike && stations.single().hasFreeDock)
+    }
+
+    @Test
     fun `the nearest station that has what is needed, within reach`() {
         val near = GiraStation(1, "Gira 1", GeoPoint(38.7140, -9.1376), bikes = 0)
         val far = GiraStation(2, "Gira 2", GeoPoint(38.7200, -9.1376), bikes = 4)

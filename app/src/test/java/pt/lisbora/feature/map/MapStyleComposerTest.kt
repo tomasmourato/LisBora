@@ -24,7 +24,7 @@ class MapStyleComposerTest {
          ]}
     """.trimIndent()
 
-    private fun compose(basemapPath: String?, poisPath: String? = null): JsonObject = Json.parseToJsonElement(
+    private fun compose(basemapPath: String?, poisPath: String? = null, giraPath: String? = null): JsonObject = Json.parseToJsonElement(
         MapStyleComposer.compose(
             baseStyle = baseStyle,
             basemapPath = basemapPath,
@@ -32,6 +32,7 @@ class MapStyleComposerTest {
             cycleAttribution = "Rede Ciclável © CML",
             palette = CycleNetworkPalette.Light,
             poisPath = poisPath,
+            giraPath = giraPath,
         ),
     ).jsonObject
 
@@ -110,6 +111,20 @@ class MapStyleComposerTest {
         assertEquals("none", water["layout"]!!.jsonObject["visibility"]!!.jsonPrimitive.content)
         assertEquals("""["in",["get","kind"],["literal",["drinking_water"]]]""", water["filter"].toString())
         assertEquals("none", layers.getValue(PoiLayer.PLACES_LABELS)["layout"]!!.jsonObject["visibility"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `with EMEL's GIRA list, its stations replace OpenStreetMap's in the bike layer`() {
+        val style = compose("/data/pack/basemap.pmtiles", poisPath = "/data/pack/pois.geojson", giraPath = "/data/pack/gira.geojson")
+        assertEquals("file:///data/pack/gira.geojson", style["sources"]!!.jsonObject[PoiLayer.GIRA_SOURCE]!!.jsonObject["data"]!!.jsonPrimitive.content)
+        val layers = style["layers"]!!.jsonArray.map { it.jsonObject }.associateBy { it["id"]!!.jsonPrimitive.content }
+        assertEquals("""["in",["get","kind"],["literal",["bike_shop","bike_repair"]]]""", layers.getValue(PoiLayer.BIKE_SERVICES.layerId)["filter"].toString())
+        val gira = layers.getValue(PoiLayer.GIRA_LAYER)
+        assertEquals(PoiLayer.GIRA_SOURCE, gira["source"]!!.jsonPrimitive.content)
+        assertEquals("none", gira["layout"]!!.jsonObject["visibility"]!!.jsonPrimitive.content)
+
+        val osmOnly = compose("/data/pack/basemap.pmtiles", poisPath = "/data/pack/pois.geojson").layerIds()
+        assertFalse(PoiLayer.GIRA_LAYER in osmOnly)
     }
 
     @Test

@@ -243,6 +243,16 @@ Cada fase termina com build, testes, instalação e execução no emulador e uma
    - `manifest.json` e pacotes versionados (GitHub Releases num repositório público, a decidir nessa altura).
    - Atualização por WorkManager com sha256, troca atómica e reversão.
    - GitHub Actions semanal: corre o pipeline e os testes de qualidade e publica só se houver mudanças e o QA passar.
+   - Pedido do utilizador: atualizar também os dados da GIRA.
+   - **Feito (26/10/2026).**
+     - Onde: o release `datapack` (pré-lançamento) do próprio repositório. O `manifest.json` é sempre o mesmo endereço; cada ficheiro tem o nome do conteúdo (`graph.faab832ca7ada312.lbg`), por isso um ficheiro publicado nunca muda e só se envia o que mudou. Ficam os ficheiros do pacote atual e do anterior (para telemóveis a meio de uma descarga); os outros são apagados.
+     - Manifesto: `dataVersion` (quando o conteúdo mudou pela última vez; só muda quando muda algum ficheiro), `formats` (versões do `graph.lbg` e do `search.lbs`, lidas do mesmo código do `:core:routing`) e, nos publicados, o `url` de cada ficheiro. O grafo e o índice levam por dentro a data da fonte mais recente (OSM, CML) e não a hora do build: dois builds com as mesmas fontes dão os mesmos bytes (verificado com dois builds seguidos do grafo e do índice), por isso uma semana sem mudanças não publica nada.
+     - Pipeline: `gira` (lista das estações da EMEL), `pull` (descarrega o pacote publicado) e `release` (prepara só os ficheiros novos e o manifesto; nada, se só mudaram as datas dos `*.meta.json`).
+     - Workflow `.github/workflows/data.yml`, às segundas às 04:30 UTC e a pedido: testes do router e do pipeline, `pull`, `fetch-cml` e `gira` (se falharem, fica o que o pacote tem), `build` (QA e rotas de referência), `search` (pesquisas de referência), `discover` (descobertas de referência), mapa base na primeira segunda-feira do mês ou a pedido, `release` e publicação (ficheiros primeiro, manifesto no fim). O relatório QA fica como artefacto. Corre só o pipeline (`-Plisbora.semApp=true`), sem o Android SDK.
+     - App: os ficheiros ficam em `filesDir/datapack/objects`, uma vez cada, com o nome do conteúdo, e o `state.json` guarda o pacote em uso, o anterior, um descarregado à espera e as versões recusadas; mudar de pacote é escrever esse ficheiro. O `DataPackUpdater` lê o manifesto, descarrega só o que falta (retoma descargas cortadas), confere tamanho e SHA-256 e deixa o pacote para o próximo arranque: o mapa, o router e a pesquisa usam sempre a mesma versão. Ignora pacotes não mais recentes, recusados ou em formatos que a app não lê ("precisa de uma versão mais recente da app"); um 404 (nada publicado) não é erro. WorkManager uma vez por dia, só em Wi-Fi, com bateria e espaço; nas preferências, "Dados do mapa" mostra a versão e as datas das fontes (rede da CML, OpenStreetMap, estações GIRA), "Procurar dados novos" (em qualquer rede) e, com dados novos prontos, "Reiniciar agora". Uma nova versão da app com dados mais recentes do que os descarregados passa a usar os seus.
+     - Reversão: se o grafo, o índice ou o mapa de um pacote atualizado não se lerem, o arranque seguinte volta ao anterior e essa versão nunca mais é instalada.
+     - GIRA: `gira.geojson` (202 estações com número, nome e docas, ~43 KB) vem da mesma base da app oficial e entra no pacote embutido e em cada atualização. Substitui as estações do OSM no modo GIRA sem rede e na camada "GIRA e oficinas" do mapa. As contagens em tempo real continuam a vir do `VaimooGiraFeed`.
+     - Verificação no emulador, com um servidor local (`adb reverse`; o Android 17 não deixa as apps chegar ao 10.0.2.2 sem a permissão de rede local): a app migrou do formato antigo, descarregou só o grafo e o seu `meta` (8,2 MB) entre 11 ficheiros, mostrou "Dados novos… prontos" e, depois de "Reiniciar agora", passou a usar o grafo novo. Com o grafo em uso estragado, marcou o pacote, voltou ao anterior no arranque seguinte e recusou a versão. O fluxo do workflow (`pull`, `gira`, `release` sem mudanças) correu localmente; a primeira publicação no GitHub fica para quando o workflow estiver na `main`.
 7. **Polimento**
    - Voz (TTS) e serviço em primeiro plano com o ecrã desligado.
    - Desempenho (perfil de arranque, tempo de rota), acessibilidade e preparação para a Play Store (política de privacidade).
@@ -250,7 +260,6 @@ Cada fase termina com build, testes, instalação e execução no emulador e uma
 Para o futuro, opcional:
 - Supabase (sincronização e partilha)
 - correções de contrassentido com lista manual
-- disponibilidade GIRA em tempo real (ver o fim da Fase 4)
 - "pôr do sol nos miradouros"
 - relatórios de perigos
 

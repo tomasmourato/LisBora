@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Debug builds may read data updates from the PC through adb reverse (see lisbora.dataManifestUrl in app/build.gradle.kts). -->
+    <application android:networkSecurityConfig="@xml/network_security_config" />
+
+</manifest>

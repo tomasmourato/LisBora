@@ -3,7 +3,11 @@ package pt.lisbora.pipeline
 import pt.lisbora.pipeline.basemap.BasemapCommand
 import pt.lisbora.pipeline.cml.CmlClient
 import pt.lisbora.pipeline.cml.FetchCmlCommand
+import pt.lisbora.pipeline.datapack.PullCommand
+import pt.lisbora.pipeline.datapack.ReleaseCommand
 import pt.lisbora.pipeline.dem.TerrariumDem
+import pt.lisbora.pipeline.gira.GiraCommand
+import pt.lisbora.pipeline.gira.VaimooGiraSource
 import pt.lisbora.pipeline.graph.BuildGraphCommand
 import pt.lisbora.pipeline.graph.BuildOptions
 import pt.lisbora.pipeline.http.JdkHttpGet
@@ -29,6 +33,9 @@ internal const val DEFAULT_PACK_DIR = "pipeline/work/datapack"
 internal const val BUNDLED_PACK_DIR = "app/src/main/assets/datapack"
 internal const val WORK_DIR = "pipeline/work"
 
+/** Where the app looks for data updates: the `datapack` release of the repository (see `release`). */
+internal const val PUBLISHED_MANIFEST_URL = "https://github.com/tomasmourato/LisBora/releases/download/datapack/manifest.json"
+
 internal val USAGE = """
     Utilização: gradlew :pipeline:run --args="<comando> [opções]"
     (os caminhos são relativos à raiz do repositório)
@@ -36,6 +43,7 @@ internal val USAGE = """
     Comandos:
       help                    Mostra esta ajuda.
       fetch-cml [--out DIR]   Descarrega e normaliza a Rede Ciclável da CML.
+      gira [--out DIR]        Descarrega a lista das estações GIRA (número, nome, docas) para gira.geojson.
       basemap [--out DIR] [--date AAAAMMDD] [--maxzoom N] [--pmtiles CAMINHO]
                               Extrai o mapa base da região a partir do build diário Protomaps.
       build [--out DIR] [--osm FICHEIRO] [--refresh-osm sim] [--cml FICHEIRO] [--dem-zoom N]
@@ -56,6 +64,11 @@ internal val USAGE = """
       route --de LAT,LON --para LAT,LON [--graph FICHEIRO] [--gpx FICHEIRO]
                               Uma rota com as preferências por omissão da app e as instruções; --gpx
                               escreve-a em GPX (para simular uma volta no emulador).
+      pull [--de URL] [--out DIR]
+                              Descarrega o pacote publicado (por omissão: o release datapack do GitHub).
+      release [--out DIR] [--publicado URL]
+                              Prepara a publicação do pacote em ${ReleaseCommand.DEFAULT_DIR}: só os ficheiros
+                              novos, com o nome do conteúdo, e o manifesto. Nada, se os dados não mudaram.
 
     Opções:
       --out DIR    Pasta do pacote de dados (por omissão: $DEFAULT_PACK_DIR).
@@ -85,6 +98,9 @@ internal fun run(args: List<String>, out: PrintStream): Int {
             0
         }
         "fetch-cml" -> FetchCmlCommand(CmlClient(JdkHttpGet()), out).run(packDir)
+        "gira" -> GiraCommand(VaimooGiraSource(), out).run(packDir)
+        "pull" -> PullCommand(JdkHttpGet(), out).run(options["de"] ?: PUBLISHED_MANIFEST_URL, packDir)
+        "release" -> ReleaseCommand(JdkHttpGet(), out).run(packDir, Path(ReleaseCommand.DEFAULT_DIR), options["publicado"] ?: PUBLISHED_MANIFEST_URL)
         "basemap" -> BasemapCommand(options["pmtiles"] ?: defaultPmtiles(), out).run(
             packDir = packDir,
             buildDate = options["date"],

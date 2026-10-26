@@ -4,6 +4,13 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import pt.lisbora.data.datapack.DataPackInstaller
 import pt.lisbora.data.datapack.DataPackStore
 import pt.lisbora.data.discover.PoiGeoJson
@@ -40,7 +47,10 @@ interface GiraRepository {
     suspend fun stations(): List<GiraStation>
 }
 
-/** GIRA stations from the data pack (OpenStreetMap, `amenity=bicycle_rental` of the GIRA network). Read once. */
+/**
+ * GIRA stations from the data pack: EMEL's list (`gira.geojson`, refreshed with each data update), or in
+ * packs without it OpenStreetMap's (`amenity=bicycle_rental` of the GIRA network). Read once.
+ */
 @Singleton
 class BundledGiraRepository @Inject constructor(
     private val packs: DataPackStore,
@@ -52,9 +62,29 @@ class BundledGiraRepository @Inject constructor(
 
     override suspend fun stations(): List<GiraStation> = mutex.withLock {
         cached ?: run {
-            val file = packs.pack().file(DataPackInstaller.POIS_FILE) ?: return@run emptyList()
-            withContext(io) { GiraStations.from(PoiGeoJson.parse(file.readText())) }
+            val pack = packs.pack()
+            withContext(io) {
+                pack.file(DataPackInstaller.GIRA_FILE)?.let { GiraGeoJson.parse(it.readText()) }
+                    ?: pack.file(DataPackInstaller.POIS_FILE)?.let { GiraStations.from(PoiGeoJson.parse(it.readText())) }
+                    ?: emptyList()
+            }
         }.also { cached = it }
+    }
+}
+
+/** Reads `gira.geojson`, written by the pipeline's `gira`: where each station is and its docks, no live counts. */
+internal object GiraGeoJson {
+    fun parse(json: String): List<GiraStation> = Json.parseToJsonElement(json).jsonObject["features"]!!.jsonArray.map { element ->
+        val feature = element.jsonObject
+        val properties = feature["properties"]!!.jsonObject
+        val (lon, lat) = feature["geometry"]!!.jsonObject["coordinates"]!!.jsonArray.map { it.jsonPrimitive.double }
+        GiraStation(
+            number = properties["number"]?.jsonPrimitive?.intOrNull,
+            name = properties["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            point = GeoPoint(lat, lon),
+            docks = properties["docks"]?.jsonPrimitive?.intOrNull,
+            place = properties["place"]?.jsonPrimitive?.contentOrNull,
+        )
     }
 }
 

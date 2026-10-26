@@ -69,7 +69,15 @@ class OfflineSearchRepository @Inject constructor(
         index ?: run {
             val file = packs.pack().file(DataPackInstaller.SEARCH_FILE)
                 ?: throw IOException("Data pack has no ${DataPackInstaller.SEARCH_FILE}")
-            withContext(compute) { SearchIndex(file.inputStream().buffered().use(SearchIndexFormat::read)) }
+            withContext(compute) {
+                val data = try {
+                    file.inputStream().buffered().use(SearchIndexFormat::read)
+                } catch (e: IOException) {
+                    packs.reportBroken()
+                    throw e
+                }
+                SearchIndex(data)
+            }
         }.also { index = it }
     }
 

@@ -11,6 +11,7 @@ import pt.lisbora.di.DefaultDispatcher
 import pt.lisbora.routing.RoutingEngine
 import pt.lisbora.routing.graph.GraphFormat
 import pt.lisbora.routing.graph.RoutingGraph
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,8 +30,15 @@ class RoutingEngineStore @Inject constructor(
                 ?: throw RoutingUnavailableException("Data pack has no ${DataPackInstaller.GRAPH_FILE}")
             withContext(compute) {
                 val started = System.nanoTime()
-                RoutingEngine(RoutingGraph(file.inputStream().buffered().use(GraphFormat::read))).also {
-                    Log.i(TAG, "Graph loaded in ${(System.nanoTime() - started) / 1_000_000} ms")
+                val data = try {
+                    file.inputStream().buffered().use(GraphFormat::read)
+                } catch (e: IOException) {
+                    // An updated pack whose graph cannot be read: go back to the previous pack at the next start.
+                    packs.reportBroken()
+                    throw e
+                }
+                RoutingEngine(RoutingGraph(data)).also {
+                    Log.i(TAG, "Graph loaded in ${(System.nanoTime() - started) / 1_000_000} ms (data ${data.dataVersion})")
                 }
             }
         }.also { engine = it }

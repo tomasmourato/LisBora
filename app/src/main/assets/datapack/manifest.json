@@ -1,5 +1,10 @@
 {
   "formatVersion": 1,
+  "dataVersion": "20261026T172645Z",
+  "formats": {
+    "graph.lbg": 1,
+    "search.lbs": 1
+  },
   "files": [
     {
       "path": "basemap.meta.json",
@@ -20,6 +25,16 @@
       "path": "ciclovias.meta.json",
       "size": 774,
       "sha256": "3a9e6f4aefcdf82eb34913113b6a98b40579ce9ce34020b989445e0e876e93a9"
+    },
+    {
+      "path": "gira.geojson",
+      "size": 43062,
+      "sha256": "b9b10d7255ea6b86fba56ba1c3f677c584022c0df9cbd7eba07ee02ccd02301a"
+    },
+    {
+      "path": "gira.meta.json",
+      "size": 201,
+      "sha256": "ddf43554aa6d270910b85420400347e762f87e9b70e7c8acf21f0d305ba4f9bd"
     },
     {
       "path": "graph.lbg",

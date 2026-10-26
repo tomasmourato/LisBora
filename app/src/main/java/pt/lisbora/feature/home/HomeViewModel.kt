@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pt.lisbora.R
+import pt.lisbora.data.datapack.DataPackInfo
+import pt.lisbora.data.datapack.DataUpdateStatus
+import pt.lisbora.data.datapack.DataUpdatesRepository
 import pt.lisbora.data.map.MapData
 import pt.lisbora.data.map.MapDataRepository
 import pt.lisbora.feature.map.CycleSegment
@@ -35,6 +38,9 @@ data class HomeUiState(
     /** Incremented to ask the map to fly to the user's position. */
     val recenterRequest: Long = 0L,
     val pendingMessage: HomeMessage? = null,
+    /** The data in use and its updates, shown in the preferences. */
+    val dataInfo: DataPackInfo? = null,
+    val dataStatus: DataUpdateStatus = DataUpdateStatus.Idle,
 )
 
 enum class HomeMessage(@param:StringRes val textRes: Int) {
@@ -47,12 +53,17 @@ enum class HomeMessage(@param:StringRes val textRes: Int) {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val mapDataRepository: MapDataRepository,
+    private val dataUpdates: DataUpdatesRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            dataUpdates.status.collect { status -> _uiState.update { it.copy(dataStatus = status) } }
+        }
+        refreshDataInfo()
         viewModelScope.launch {
             val state = try {
                 MapLoadState.Ready(mapDataRepository.load())
@@ -64,6 +75,27 @@ class HomeViewModel @Inject constructor(
             _uiState.update {
                 it.copy(map = state, pendingMessage = if (state is MapLoadState.Failed) HomeMessage.MapFailed else it.pendingMessage)
             }
+        }
+    }
+
+    /** "Procurar dados novos": looks now, on any network, and downloads what is new. */
+    fun onCheckDataUpdates() {
+        viewModelScope.launch {
+            dataUpdates.checkNow()
+            refreshDataInfo()
+        }
+    }
+
+    private fun refreshDataInfo() {
+        viewModelScope.launch {
+            val info = try {
+                dataUpdates.info()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            _uiState.update { it.copy(dataInfo = info) }
         }
     }
 

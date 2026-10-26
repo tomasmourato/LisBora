@@ -4,7 +4,7 @@
     <!-- Shows the rider's position on the map; processed on the device only. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <!-- Live bikes and free docks at GIRA stations; everything else works offline. -->
+    <!-- Live bikes and free docks at GIRA stations and data updates; everything else works offline. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application

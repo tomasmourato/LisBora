@@ -2,6 +2,7 @@ package pt.lisbora.feature.home
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -229,6 +230,8 @@ fun HomeRoute(
         navigation = navigation,
         navigationActions = navigationActions,
         onNavigationMessageShown = navigationViewModel::onMessageShown,
+        onCheckDataUpdates = viewModel::onCheckDataUpdates,
+        onRestart = context::restartApp,
     ) { insets ->
         val map = uiState.map
         if (map is MapLoadState.Ready) {
@@ -268,6 +271,16 @@ private const val GPX_MIME = "application/gpx+xml"
 private fun gpxFileName(): String =
     "lisbora-" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")) + ".gpx"
 
+/**
+ * Starts the app again in a new process, so newer data downloaded in the background takes over: the
+ * data pack is only switched at start-up, before the map, the router and the search read it.
+ */
+private fun Context.restartApp() {
+    val launch = packageManager.getLaunchIntentForPackage(packageName)?.component ?: return
+    startActivity(Intent.makeRestartActivityTask(launch))
+    Runtime.getRuntime().exit(0)
+}
+
 private fun Context.hasLocationPermission(): Boolean =
     listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION).any {
         ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
@@ -296,6 +309,8 @@ fun HomeScreen(
     navigation: NavigationUiState = NavigationUiState(),
     navigationActions: NavigationActions = NavigationActionsAdapter(),
     onNavigationMessageShown: () -> Unit = {},
+    onCheckDataUpdates: () -> Unit = {},
+    onRestart: () -> Unit = {},
     mapContent: @Composable (insets: MapInsets) -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -507,6 +522,10 @@ fun HomeScreen(
                 settings = planner.settings,
                 onChange = plannerActions::onSettingsChange,
                 onDismiss = plannerActions::onPreferencesClose,
+                dataInfo = uiState.dataInfo,
+                dataStatus = uiState.dataStatus,
+                onCheckDataUpdates = onCheckDataUpdates,
+                onRestart = onRestart,
             )
         }
     }

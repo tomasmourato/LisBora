@@ -1,5 +1,6 @@
 package pt.lisbora.data.map
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -47,7 +48,16 @@ class BundledMapDataRepository @Inject constructor(
     private var cached: MapData? = null
 
     override suspend fun load(): MapData = mutex.withLock {
-        cached ?: packs.pack().let { pack -> withContext(io) { build(pack) } }.also { cached = it }
+        cached ?: packs.pack().let { pack ->
+            try {
+                withContext(io) { build(pack) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                packs.reportBroken()
+                throw e
+            }
+        }.also { cached = it }
     }
 
     private fun build(pack: InstalledDataPack): MapData {
@@ -58,6 +68,7 @@ class BundledMapDataRepository @Inject constructor(
             ?: CycleNetworkMeta(attribution = "", sourceLastEdit = null, lengthKmByClass = emptyMap())
         val basemap = pack.file(DataPackInstaller.BASEMAP_FILE)
         val pois = pack.file(DataPackInstaller.POIS_FILE)
+        val gira = pack.file(DataPackInstaller.GIRA_FILE)
         val elevationAttribution = pack.file(DataPackInstaller.GRAPH_META_FILE)
             ?.let { runCatching { GraphMeta.elevationAttribution(it.readText()) }.getOrNull() }
 
@@ -70,6 +81,7 @@ class BundledMapDataRepository @Inject constructor(
             routeAttribution = elevationAttribution,
             poisPath = pois?.absolutePath,
             poiPalette = poiPalette,
+            giraPath = gira?.absolutePath,
         )
         return MapData(
             lightStyle = style("map/style-light.json", CycleNetworkPalette.Light, PoiPalette.Light),

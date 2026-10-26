@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
@@ -28,6 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import pt.lisbora.R
+import pt.lisbora.data.datapack.DataPackInfo
+import pt.lisbora.data.datapack.DataUpdateStatus
 import pt.lisbora.data.settings.RidingSettings
 import pt.lisbora.routing.eta.BikeType
 import pt.lisbora.routing.eta.RiderLevel
@@ -35,16 +38,20 @@ import pt.lisbora.routing.weighting.TripPurpose
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** Route preferences, saved as soon as they change; open routes are recomputed. */
+/** Route preferences, saved as soon as they change; open routes are recomputed. Then the map data and its updates. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PreferencesSheet(
     settings: RidingSettings,
     onChange: ((RidingSettings) -> RidingSettings) -> Unit,
     onDismiss: () -> Unit,
+    dataInfo: DataPackInfo? = null,
+    dataStatus: DataUpdateStatus = DataUpdateStatus.Idle,
+    onCheckDataUpdates: () -> Unit = {},
+    onRestart: () -> Unit = {},
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        PreferencesContent(settings, onChange, onDismiss)
+        PreferencesContent(settings, onChange, onDismiss, dataInfo = dataInfo, dataStatus = dataStatus, onCheckDataUpdates = onCheckDataUpdates, onRestart = onRestart)
     }
 }
 
@@ -55,6 +62,10 @@ fun PreferencesContent(
     onChange: ((RidingSettings) -> RidingSettings) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    dataInfo: DataPackInfo? = null,
+    dataStatus: DataUpdateStatus = DataUpdateStatus.Idle,
+    onCheckDataUpdates: () -> Unit = {},
+    onRestart: () -> Unit = {},
 ) {
     Column(
         modifier
@@ -141,6 +152,9 @@ fun PreferencesContent(
                 TextButton(onClick = { onChange { it.copy(personalFactor = 1.0) } }) { Text(stringResource(R.string.prefs_pace_reset)) }
             }
         }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        DataPackSection(info = dataInfo, status = dataStatus, onCheck = onCheckDataUpdates, onRestart = onRestart)
 
         Button(onClick = onDone, modifier = Modifier.align(Alignment.End).padding(bottom = 8.dp)) {
             Text(stringResource(R.string.prefs_done))

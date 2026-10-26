@@ -192,6 +192,7 @@ fun LisboraMap(
             val visibility = PropertyFactory.visibility(if (layer in poiLayers) Property.VISIBLE else Property.NONE)
             s.getLayer(layer.layerId)?.setProperties(visibility)
             if (layer == PoiLayer.PLACES) s.getLayer(PoiLayer.PLACES_LABELS)?.setProperties(visibility)
+            if (layer == PoiLayer.BIKE_SERVICES) s.getLayer(PoiLayer.GIRA_LAYER)?.setProperties(visibility)
         }
     }
 

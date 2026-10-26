@@ -2,7 +2,7 @@
 
 App Android para andar de bicicleta em Lisboa. Gera rotas que privilegiam a rede ciclável e as ruas calmas, e sugere passeios automáticos para o tempo que tens disponível (lazer, paisagens, rio, desporto, subidas, descidas…).
 
-As rotas são calculadas **no telemóvel**: não há servidor nem contas. A única ligação à Internet é opcional: no Descobrir com GIRA, a app lê as bicicletas e docas livres das estações (dados da EMEL); sem rede, funciona com as estações do pacote. O plano completo está em [docs/PLANO.md](docs/PLANO.md).
+As rotas são calculadas **no telemóvel**: não há servidor nem contas. A Internet é opcional e serve para duas coisas: no Descobrir com GIRA, a app lê as bicicletas e docas livres das estações (dados da EMEL); uma vez por dia, em Wi-Fi, procura dados novos (rede ciclável, ruas, estações GIRA), publicados todas as semanas num release do GitHub. Sem rede, funciona com os dados que tem. O plano completo está em [docs/PLANO.md](docs/PLANO.md).
 
 ## Estado
 
@@ -14,7 +14,7 @@ As rotas são calculadas **no telemóvel**: não há servidor nem contas. A úni
 | 3 | Planear A→B | ✅ |
 | 4 | Descobrir (rotas automáticas) | ✅ |
 | 5 | Seguir rota | ✅ |
-| 6 | Atualização de dados sem nova versão da app | — |
+| 6 | Atualização de dados sem nova versão da app | ✅ |
 | 7 | Polimento | — |
 
 ## Estrutura
@@ -53,7 +53,9 @@ Para verificar o Descobrir no grafo real (descobertas de referência, com tempos
 ./gradlew :pipeline:run --args="discover"
 ```
 
-A app traz o grafo, o índice e os pontos de interesse no pacote embutido (`app/src/main/assets/datapack`). Para os atualizar, usa `--out app/src/main/assets/datapack` em `build` e `search`.
+A app traz o grafo, o índice, os pontos de interesse e as estações GIRA no pacote embutido (`app/src/main/assets/datapack`). Para os atualizar, usa `--out app/src/main/assets/datapack` em `build`, `search` e `gira`.
+
+Depois de instalada, a app atualiza os dados sozinha: o workflow [Dados](.github/workflows/data.yml) reconstrói o pacote às segundas, corre as verificações de qualidade e, se os dados mudaram, publica-o no release `datapack`. A app descarrega só os ficheiros que mudaram e passa a usá-los no arranque seguinte.
 
 ## Dados e licenças
 
@@ -62,6 +64,7 @@ O código ainda não tem licença: todos os direitos estão reservados. Os dados
 - **OpenStreetMap** — © contribuidores do OpenStreetMap, [ODbL](https://opendatacommons.org/licenses/odbl/). As bases de dados derivadas (grafo de rotas, índice de pesquisa, pontos de interesse) são distribuídas sob a ODbL.
 - **Rede Ciclável de Lisboa** — © Câmara Municipal de Lisboa ([Lisboa Aberta](https://dados.cm-lisboa.pt/dataset/rede-ciclavel)), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Os dados são normalizados e associados ao grafo OSM pela LisBora.
 - **Elevação** — [Mapterhorn](https://mapterhorn.com), com dados da Direção-Geral do Território (LiDAR, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)) e Copernicus GLO-30 (© DLR e.V. 2010-2014 e © Airbus Defence and Space GmbH 2014-2018, fornecido no âmbito do COPERNICUS pela União Europeia e a ESA).
+- **Estações GIRA** — EMEL, lidas da plataforma da GIRA (a mesma que a app oficial usa; não é uma API publicada).
 - **Mapa base** — [Protomaps](https://protomaps.com), com dados © contribuidores do OpenStreetMap. Fontes Noto Sans (SIL Open Font License) e ícones derivados de [tangrams/icons](https://github.com/tangrams/icons) (MIT); ver [app/src/main/assets/map/NOTICE.md](app/src/main/assets/map/NOTICE.md).
 
 A LisBora mostra o nível de stress e os perigos de cada rota, mas nenhuma rota é garantidamente segura. Circula sempre com atenção e cumpre o Código da Estrada.

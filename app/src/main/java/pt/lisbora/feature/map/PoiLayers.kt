@@ -25,6 +25,10 @@ enum class PoiLayer(val kinds: Set<PoiKind>, val minZoom: Double, @param:StringR
 
         /** Names of [PLACES], shown close up. */
         const val PLACES_LABELS = "poi-places-label"
+
+        /** EMEL's GIRA stations (`gira.geojson`), shown with [BIKE_SERVICES] in place of OpenStreetMap's. */
+        const val GIRA_SOURCE = "gira"
+        const val GIRA_LAYER = "poi-gira"
     }
 }
 

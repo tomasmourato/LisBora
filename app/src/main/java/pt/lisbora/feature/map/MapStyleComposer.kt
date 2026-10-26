@@ -15,6 +15,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import pt.lisbora.routing.discover.PoiKind
 import pt.lisbora.routing.model.CycleInfraClass
 
 /** Ids of the sources and layers LisBora adds on top of the basemap. */
@@ -51,6 +52,7 @@ object MapStyleComposer {
         routeAttribution: String? = null,
         poisPath: String? = null,
         poiPalette: PoiPalette = PoiPalette.Light,
+        giraPath: String? = null,
     ): String {
         val style = Json.parseToJsonElement(baseStyle).jsonObject
         val baseSources = style.getValue("sources").jsonObject
@@ -82,12 +84,18 @@ object MapStyleComposer {
                     put("data", "file://$poisPath")
                 }
             }
+            if (poisPath != null && giraPath != null) {
+                putJsonObject(PoiLayer.GIRA_SOURCE) {
+                    put("type", "geojson")
+                    put("data", "file://$giraPath")
+                }
+            }
         }
 
         val keptLayers = baseLayers.filter { basemapPath != null || it.sourceId() != BASEMAP_SOURCE }
         val firstLabel = keptLayers.indexOfFirst { it["type"]?.jsonPrimitive?.contentOrNull == "symbol" }
             .takeIf { it >= 0 } ?: keptLayers.size
-        val poiLayers = if (poisPath != null) poiLayers(palette, poiPalette) else emptyList()
+        val poiLayers = if (poisPath != null) poiLayers(palette, poiPalette, officialGira = giraPath != null) else emptyList()
         val poiLabels = if (poisPath != null) listOf(poiLabelLayer(poiPalette)) else emptyList()
         val layers = keptLayers.take(firstLabel) + cycleLayers(palette) + poiLayers + routeLayers(palette) +
             keptLayers.drop(firstLabel) + poiLabels + markerLayer(palette) + markerLabelLayer(poiPalette)
@@ -156,19 +164,22 @@ object MapStyleComposer {
     )
 
     /** `["in", ["get", "kind"], ["literal", [...]]]` */
-    private fun kindIn(layer: PoiLayer) = buildJsonArray {
+    private fun kindIn(kinds: Collection<PoiKind>) = buildJsonArray {
         add(JsonPrimitive("in"))
         add(buildJsonArray { add(JsonPrimitive("get")); add(JsonPrimitive("kind")) })
-        add(buildJsonArray { add(JsonPrimitive("literal")); add(buildJsonArray { layer.kinds.forEach { add(JsonPrimitive(it.code)) } }) })
+        add(buildJsonArray { add(JsonPrimitive("literal")); add(buildJsonArray { kinds.forEach { add(JsonPrimitive(it.code)) } }) })
     }
 
-    private fun poiLayers(palette: CycleNetworkPalette, poiPalette: PoiPalette): List<JsonObject> = PoiLayer.entries.map { layer ->
-        buildJsonObject {
-            put("id", layer.layerId)
+    private fun kindIn(layer: PoiLayer) = kindIn(layer.kinds)
+
+    /** With [officialGira], the GIRA stations come from EMEL's list and OpenStreetMap's bike-share points are left out. */
+    private fun poiLayers(palette: CycleNetworkPalette, poiPalette: PoiPalette, officialGira: Boolean): List<JsonObject> {
+        fun circles(id: String, source: String, layer: PoiLayer, filter: JsonElement?) = buildJsonObject {
+            put("id", id)
             put("type", "circle")
-            put("source", PoiLayer.SOURCE)
+            put("source", source)
             put("minzoom", layer.minZoom)
-            put("filter", kindIn(layer))
+            filter?.let { put("filter", it) }
             putJsonObject("layout") { put("visibility", "none") }
             putJsonObject("paint") {
                 put("circle-color", poiPalette.color(layer))
@@ -177,6 +188,11 @@ object MapStyleComposer {
                 put("circle-stroke-width", 1.5)
             }
         }
+        val layers = PoiLayer.entries.map { layer ->
+            val kinds = if (officialGira && layer == PoiLayer.BIKE_SERVICES) layer.kinds - PoiKind.BIKE_SHARE else layer.kinds
+            circles(layer.layerId, PoiLayer.SOURCE, layer, kindIn(kinds))
+        }
+        return if (officialGira) layers + circles(PoiLayer.GIRA_LAYER, PoiLayer.GIRA_SOURCE, PoiLayer.BIKE_SERVICES, filter = null) else layers
     }
 
     private fun poiLabelLayer(poiPalette: PoiPalette) = labelLayer(

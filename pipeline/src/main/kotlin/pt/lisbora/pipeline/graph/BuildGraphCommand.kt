@@ -10,6 +10,7 @@ import kotlinx.serialization.json.putJsonObject
 import pt.lisbora.pipeline.cml.FetchCmlCommand
 import pt.lisbora.pipeline.datapack.PackManifest
 import pt.lisbora.pipeline.datapack.PrettyJson
+import pt.lisbora.pipeline.datapack.SourceVersion
 import pt.lisbora.pipeline.dem.TerrariumDem
 import pt.lisbora.pipeline.dem.TileSource
 import pt.lisbora.pipeline.http.JdkHttpGet
@@ -32,8 +33,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Clock
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import kotlin.io.path.exists
 import kotlin.io.path.fileSize
 import kotlin.io.path.outputStream
@@ -67,7 +66,6 @@ class BuildGraphCommand(
             out.println("ERRO: falta ${options.cmlFile}; corre primeiro fetch-cml.")
             return 2
         }
-        val dataVersion = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmm'Z'").withZone(ZoneOffset.UTC).format(clock.instant())
         val cmlCollection = Json.parseToJsonElement(options.cmlFile.readText()).jsonObject
         val cmlLines = CmlLine.fromFeatureCollection(cmlCollection)
         val cmlMetaFile = options.cmlFile.resolveSibling(FetchCmlCommand.META_FILE)
@@ -78,6 +76,7 @@ class BuildGraphCommand(
         val osm = OsmExtract(options.osmFile, http, out).ensure(options.refreshOsm)
         val hopper = GraphHopperImport(osm, options.workDir.resolve("gh"), out).importOrLoad()
         val osmDate = hopper.properties.get("datareader.data.date").ifBlank { null }
+        val dataVersion = SourceVersion.of(osmDate, cmlLastEdit, fallback = clock.instant())
         val region = RegionExtractor(hopper, bounds).extract()
         hopper.close()
         out.println("Região: ${region.nodes.size} nós, ${region.edges.size} arestas, ${region.restrictions.size} restrições")

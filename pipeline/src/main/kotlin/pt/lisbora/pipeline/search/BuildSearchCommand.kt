@@ -5,6 +5,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import pt.lisbora.pipeline.datapack.PackManifest
 import pt.lisbora.pipeline.datapack.PrettyJson
+import pt.lisbora.pipeline.datapack.SourceVersion
 import pt.lisbora.pipeline.http.JdkHttpGet
 import pt.lisbora.pipeline.osm.OsmExtract
 import pt.lisbora.routing.discover.Poi
@@ -20,8 +21,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Clock
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import kotlin.io.path.fileSize
 import kotlin.io.path.outputStream
 import kotlin.io.path.readText
@@ -50,11 +49,10 @@ class BuildSearchCommand(
 ) {
 
     fun run(options: SearchOptions): Int {
-        val dataVersion = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmm'Z'").withZone(ZoneOffset.UTC).format(clock.instant())
         val osm = OsmExtract(options.osmFile, http, out).ensure(options.refreshOsm)
         val places = OsmPlaceScan(osm, bounds, out, options.showName).scan()
         val (builder, stats) = PlaceIndexer(bounds).index(places)
-        val data = builder.build(dataVersion)
+        val data = builder.build(SourceVersion.of(places.dataDate, fallback = clock.instant()))
         out.println(
             "Pesquisa: ${data.entryCount} entradas (${stats.streets} ruas, ${stats.pois} pontos de interesse, " +
                 "${stats.addresses} moradas, ${stats.localities + stats.adminAreas} localidades), ${data.tokens.size} palavras",

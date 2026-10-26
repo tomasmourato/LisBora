@@ -12,7 +12,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlinx.coroutines.flow.MutableStateFlow
 import pt.lisbora.data.datapack.CycleNetworkMeta
+import pt.lisbora.data.datapack.DataPackInfo
+import pt.lisbora.data.datapack.DataUpdateStatus
+import pt.lisbora.data.datapack.DataUpdatesRepository
 import pt.lisbora.data.map.MapData
 import pt.lisbora.data.map.MapDataRepository
 import pt.lisbora.feature.map.CycleSegment
@@ -20,6 +24,7 @@ import pt.lisbora.feature.map.PoiLayer
 import pt.lisbora.feature.map.RecenterResult
 import pt.lisbora.routing.model.CycleInfraClass
 import java.io.IOException
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -45,11 +50,37 @@ class HomeViewModelTest {
         override suspend fun load(): MapData = load()
     }
 
-    private fun viewModel(repository: MapDataRepository = repository { mapData }) = HomeViewModel(repository)
+    /** Data updates that find [found] when asked. */
+    private class FakeDataUpdates(private val found: DataUpdateStatus = DataUpdateStatus.UpToDate) : DataUpdatesRepository {
+        override val status = MutableStateFlow<DataUpdateStatus>(DataUpdateStatus.Idle)
+        var checkedAt: Instant? = null
+
+        override suspend fun info() = DataPackInfo(updatedAt = Instant.parse("2026-10-26T15:00:00Z"), checkedAt = checkedAt)
+
+        override suspend fun checkNow(): DataUpdateStatus {
+            checkedAt = Instant.parse("2026-11-02T08:00:00Z")
+            status.value = found
+            return found
+        }
+    }
+
+    private fun viewModel(repository: MapDataRepository = repository { mapData }, dataUpdates: DataUpdatesRepository = FakeDataUpdates()) =
+        HomeViewModel(repository, dataUpdates)
 
     @Test
     fun `loads the map data on start`() {
         assertEquals(MapLoadState.Ready(mapData), viewModel().uiState.value.map)
+    }
+
+    @Test
+    fun `shows the data in use, and what a check for newer data found`() {
+        val vm = viewModel(dataUpdates = FakeDataUpdates(found = DataUpdateStatus.Ready("20261102T043012Z")))
+        assertEquals(Instant.parse("2026-10-26T15:00:00Z"), vm.uiState.value.dataInfo!!.updatedAt)
+        assertEquals(DataUpdateStatus.Idle, vm.uiState.value.dataStatus)
+
+        vm.onCheckDataUpdates()
+        assertEquals(DataUpdateStatus.Ready("20261102T043012Z"), vm.uiState.value.dataStatus)
+        assertEquals(Instant.parse("2026-11-02T08:00:00Z"), vm.uiState.value.dataInfo!!.checkedAt)
     }
 
     @Test
