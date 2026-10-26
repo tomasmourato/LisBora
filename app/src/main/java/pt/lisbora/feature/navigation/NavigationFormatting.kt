@@ -1,8 +1,9 @@
 package pt.lisbora.feature.navigation
 
+import android.content.res.Resources
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalResources
 import pt.lisbora.R
 import pt.lisbora.feature.map.formatLength
 import pt.lisbora.feature.planner.formatGrade
@@ -18,7 +19,10 @@ import pt.lisbora.routing.navigation.WalkChange
  * The street goes on a line of its own (no article to guess: "a Rua", "o Largo").
  */
 @Composable
-fun Instruction.text(): String {
+fun Instruction.text(): String = text(LocalResources.current)
+
+/** [text] outside Compose: the notification and the voice. */
+fun Instruction.text(res: Resources): String {
     val base = when (maneuver) {
         Maneuver.DEPART -> R.string.nav_depart
         Maneuver.CONTINUE -> R.string.nav_continue
@@ -43,9 +47,9 @@ fun Instruction.text(): String {
         else -> null
     }
     return when {
-        change == null -> stringResource(base)
-        plain -> stringResource(change.first)
-        else -> stringResource(change.second, stringResource(base))
+        change == null -> res.getString(base)
+        plain -> res.getString(change.first)
+        else -> res.getString(change.second, res.getString(base))
     }
 }
 
@@ -71,19 +75,19 @@ fun Maneuver.iconRes(): Int = when (this) {
 
 /** "Subida de 9% daqui a 150 m", "Calçada daqui a 80 m"… */
 @Composable
-fun RouteHazard.aheadText(distanceM: Double): String {
-    val distance = formatLength(distanceM)
-    return when (kind) {
-        HazardKind.STEEP_CLIMB -> stringResource(R.string.nav_ahead_climb, formatGrade(gradePercent ?: 0.0), distance)
-        HazardKind.STEEP_DESCENT -> stringResource(
-            if (walkAdvised) R.string.nav_ahead_descent_walk else R.string.nav_ahead_descent,
-            formatGrade(gradePercent ?: 0.0),
-            distance,
-        )
-        HazardKind.COBBLES -> stringResource(R.string.nav_ahead_cobbles, distance)
-        HazardKind.TRAM_TRACKS -> stringResource(R.string.nav_ahead_tram, distance)
-        HazardKind.WALK -> stringResource(R.string.nav_ahead_walk, distance)
-        HazardKind.BUSY_ROAD -> stringResource(R.string.nav_ahead_busy, distance)
-        HazardKind.FERRY -> stringResource(R.string.nav_ahead_ferry, distance)
-    }
+fun RouteHazard.aheadText(distanceM: Double): String = aheadText(LocalResources.current, formatLength(distanceM))
+
+/** [aheadText] with the distance already in words ("150 metros" for the voice). */
+fun RouteHazard.aheadText(res: Resources, distance: String): String = when (kind) {
+    HazardKind.STEEP_CLIMB -> res.getString(R.string.nav_ahead_climb, formatGrade(gradePercent ?: 0.0), distance)
+    HazardKind.STEEP_DESCENT -> res.getString(
+        if (walkAdvised) R.string.nav_ahead_descent_walk else R.string.nav_ahead_descent,
+        formatGrade(gradePercent ?: 0.0),
+        distance,
+    )
+    HazardKind.COBBLES -> res.getString(R.string.nav_ahead_cobbles, distance)
+    HazardKind.TRAM_TRACKS -> res.getString(R.string.nav_ahead_tram, distance)
+    HazardKind.WALK -> res.getString(R.string.nav_ahead_walk, distance)
+    HazardKind.BUSY_ROAD -> res.getString(R.string.nav_ahead_busy, distance)
+    HazardKind.FERRY -> res.getString(R.string.nav_ahead_ferry, distance)
 }

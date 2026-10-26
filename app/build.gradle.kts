@@ -28,13 +28,37 @@ android {
         buildConfigField("String", "DATA_MANIFEST_URL", "\"$manifestUrl\"")
     }
 
+    // The Google Play upload key comes from ~/.gradle/gradle.properties, never from the repository:
+    // lisbora.signing.storeFile, lisbora.signing.storePassword, lisbora.signing.keyAlias and
+    // lisbora.signing.keyPassword. Without it, release builds are signed with the debug key: enough to
+    // install and test them, not to publish (Google Play refuses debug-signed bundles).
+    val upload = providers.gradleProperty("lisbora.signing.storeFile").orNull?.let { path ->
+        signingConfigs.create("upload") {
+            storeFile = file(path)
+            storePassword = providers.gradleProperty("lisbora.signing.storePassword").get()
+            keyAlias = providers.gradleProperty("lisbora.signing.keyAlias").get()
+            keyPassword = providers.gradleProperty("lisbora.signing.keyPassword").get()
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = upload ?: signingConfigs.getByName("debug")
+        }
+        // For :baselineprofile: like the release, but not shrunk, so the recorded startup profile names
+        // the real classes (R8 maps them for the release), and debug-signed so it installs over it.
+        create("benchmark") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
         }
     }
 
@@ -80,6 +104,8 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.work.runtime)
+    // Compiles the startup profile (src/main/baseline-prof.txt) on install, also outside Google Play.
+    implementation(libs.androidx.profileinstaller)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -93,6 +119,8 @@ dependencies {
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    // Accessibility Test Framework checks (labels, touch targets, contrast) on every UI test action.
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4.accessibility)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
     // Compose's ui-test pulls Espresso 3.5, which crashes on API 37 (InputManager.getInstance was removed).

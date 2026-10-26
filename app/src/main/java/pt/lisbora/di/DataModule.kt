@@ -13,7 +13,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import pt.lisbora.BuildConfig
 import pt.lisbora.data.datapack.AssetSource
 import pt.lisbora.data.datapack.DataPackInstaller
@@ -60,6 +62,11 @@ annotation class IoDispatcher
 @Retention(AnnotationRetention.BINARY)
 annotation class DefaultDispatcher
 
+/** For work that outlives any screen, such as a ride being followed. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ApplicationScope
+
 private val Context.ridingSettingsStore: DataStore<Preferences> by preferencesDataStore(name = "riding_settings")
 
 @Module
@@ -87,6 +94,11 @@ object DataModule {
     @Provides
     @DefaultDispatcher
     fun defaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
+
+    @Provides
+    @Singleton
+    @ApplicationScope
+    fun applicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @Provides
     @Singleton

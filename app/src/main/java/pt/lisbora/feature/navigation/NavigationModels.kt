@@ -114,6 +114,9 @@ data class NavigationUiState(
     /** Incremented to ask the map to follow the rider again after they moved it. */
     val followRequest: Int = 0,
     val message: NavigationMessage? = null,
+    /** The voice switch (a setting), and whether the phone lacks a Portuguese voice; filled by the screen's ViewModel. */
+    val voiceOn: Boolean = true,
+    val voiceUnavailable: Boolean = false,
 ) {
     val showing: Boolean get() = active || summary != null
 }

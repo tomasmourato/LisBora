@@ -84,7 +84,8 @@ class PlannerViewModel @Inject constructor(
         viewModelScope.launch { savedRoutes.routes.collect { list -> _uiState.update { it.copy(savedRoutes = list) } } }
         viewModelScope.launch {
             settingsRepository.settings.distinctUntilChanged().collect { settings ->
-                val changed = _uiState.value.settings != settings
+                // Only what changes routes (not the voice switch).
+                val changed = _uiState.value.settings.toRoutingPreferences() != settings.toRoutingPreferences()
                 _uiState.update { it.copy(settings = settings) }
                 if (changed) {
                     when (val mode = _uiState.value.mode) {

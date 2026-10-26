@@ -1,6 +1,7 @@
 package pt.lisbora.feature.discover
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -9,6 +10,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,6 +40,9 @@ class DiscoverScreensTest {
 
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Before
+    fun checkAccessibility() = composeRule.enableAccessibilityChecks()
 
     private val cais = GeoPoint(38.7056, -9.1452)
     private val saved = SavedRoute(

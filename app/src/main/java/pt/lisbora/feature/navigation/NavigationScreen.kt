@@ -51,6 +51,7 @@ import kotlin.math.roundToInt
 interface NavigationActions {
     fun onNavigationStop()
     fun onRecenter()
+    fun onToggleVoice()
     fun onGiraGoToStation()
     fun onGiraSwapped()
     fun onExportGpx()
@@ -61,6 +62,7 @@ interface NavigationActions {
 open class NavigationActionsAdapter : NavigationActions {
     override fun onNavigationStop() = Unit
     override fun onRecenter() = Unit
+    override fun onToggleVoice() = Unit
     override fun onGiraGoToStation() = Unit
     override fun onGiraSwapped() = Unit
     override fun onExportGpx() = Unit
@@ -219,18 +221,29 @@ private fun GiraStation.counts(): String {
 
 /**
  * Bottom of the map while riding: time and distance left with the arrival time, the GIRA trip's time,
- * "Recentrar" and "Terminar".
+ * the voice switch, "Recentrar" and "Terminar".
  */
 @Composable
 fun NavigationBottom(state: NavigationUiState, actions: NavigationActions, modifier: Modifier = Modifier) {
     Column(modifier, horizontalAlignment = Alignment.End) {
-        val recenter = stringResource(R.string.nav_recenter)
-        SmallFloatingActionButton(
-            onClick = actions::onRecenter,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.padding(end = 16.dp, bottom = 12.dp).semantics { contentDescription = recenter },
-        ) {
-            Icon(painterResource(R.drawable.ic_my_location), contentDescription = null)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(end = 16.dp, bottom = 12.dp)) {
+            val voice = stringResource(if (state.voiceOn) R.string.nav_voice_off else R.string.nav_voice_on)
+            SmallFloatingActionButton(
+                onClick = actions::onToggleVoice,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.semantics { contentDescription = voice },
+            ) {
+                val speaking = state.voiceOn && !state.voiceUnavailable
+                Icon(painterResource(if (speaking) R.drawable.ic_volume_up else R.drawable.ic_volume_off), contentDescription = null)
+            }
+            val recenter = stringResource(R.string.nav_recenter)
+            SmallFloatingActionButton(
+                onClick = actions::onRecenter,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.semantics { contentDescription = recenter },
+            ) {
+                Icon(painterResource(R.drawable.ic_my_location), contentDescription = null)
+            }
         }
         Surface(
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),

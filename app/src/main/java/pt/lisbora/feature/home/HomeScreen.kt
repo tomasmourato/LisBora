@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
@@ -46,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -120,6 +123,19 @@ fun HomeRoute(
     var navigationPending by remember { mutableStateOf(false) }
     var confirmStop by remember { mutableStateOf(false) }
     val startNavigation = { plannerViewModel.navigationRequest()?.let(navigationViewModel::start) }
+    // Asked once, at the first ride: the notification shows the next turn with the screen off.
+    var notificationsAsked by rememberSaveable { mutableStateOf(false) }
+    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { startNavigation() }
+    val startRide = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsAsked &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationsAsked = true
+            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            startNavigation()
+        }
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { result ->
@@ -127,7 +143,7 @@ fun HomeRoute(
         if (navigationPending) {
             navigationPending = false
             viewModel.onLocationPermissionResult(granted)
-            if (granted) startNavigation()
+            if (granted) startRide()
         } else if (myLocationPending) {
             myLocationPending = false
             if (granted) {
@@ -159,7 +175,7 @@ fun HomeRoute(
             },
             onStartNavigationRequested = {
                 if (context.hasLocationPermission()) {
-                    startNavigation()
+                    startRide()
                 } else {
                     navigationPending = true
                     requestPermission()
@@ -176,6 +192,7 @@ fun HomeRoute(
         object : NavigationActions {
             override fun onNavigationStop() { confirmStop = true }
             override fun onRecenter() = navigationViewModel.onRecenter()
+            override fun onToggleVoice() = navigationViewModel.onToggleVoice()
             override fun onGiraGoToStation() = navigationViewModel.onGiraGoToStation()
             override fun onGiraSwapped() = navigationViewModel.onGiraSwapped()
             override fun onExportGpx() = gpxLauncher.launch(gpxFileName())
@@ -337,6 +354,11 @@ fun HomeScreen(
             onNavigationMessageShown()
         }
     }
+    val noVoice = stringResource(R.string.nav_voice_unavailable)
+    val warnNoVoice = navigation.active && navigation.voiceOn && navigation.voiceUnavailable
+    LaunchedEffect(warnNoVoice) {
+        if (warnNoVoice) snackbarHostState.showSnackbar(noVoice)
+    }
     if (navigation.active) KeepScreenOn()
     val palette = if (darkTheme) CycleNetworkPalette.Dark else CycleNetworkPalette.Light
     val routePalette = if (darkTheme) RoutePalette.Dark else RoutePalette.Light
@@ -414,6 +436,7 @@ fun HomeScreen(
                     SearchPill(
                         text = (mode as? PlannerMode.PlaceDetails)?.place?.displayName(),
                         onClick = plannerActions::onSearchOpen,
+                        onPreferences = plannerActions::onPreferences,
                         modifier = measureTop,
                     )
                     val legendLabel = stringResource(R.string.map_legend_toggle)
@@ -531,8 +554,9 @@ fun HomeScreen(
     }
 }
 
+/** "Para onde vais?", with the preferences (and from there "Sobre a LisBora") at its end. */
 @Composable
-private fun SearchPill(text: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SearchPill(text: String?, onClick: () -> Unit, onPreferences: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
         shape = CircleShape,
@@ -542,7 +566,7 @@ private fun SearchPill(text: String?, onClick: () -> Unit, modifier: Modifier = 
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            modifier = Modifier.padding(start = 20.dp, end = 4.dp),
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_search),
@@ -556,7 +580,15 @@ private fun SearchPill(text: String?, onClick: () -> Unit, modifier: Modifier = 
                 color = if (text == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = onPreferences) {
+                Icon(
+                    painterResource(R.drawable.ic_tune),
+                    contentDescription = stringResource(R.string.directions_preferences),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

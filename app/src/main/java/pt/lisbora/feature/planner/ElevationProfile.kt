@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -101,6 +102,8 @@ fun ElevationProfile(route: Route, hazards: List<RouteHazard>, palette: RoutePal
             } else " ",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // The blank line only keeps the room for the reading: nothing for a screen reader.
+            modifier = if (i == null) Modifier.clearAndSetSemantics {} else Modifier,
         )
         Box {
             Canvas(

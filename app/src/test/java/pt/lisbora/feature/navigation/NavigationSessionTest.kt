@@ -39,7 +39,7 @@ import pt.lisbora.routing.weighting.RoutingPreferences
 import kotlin.math.cos
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class NavigationViewModelTest {
+class NavigationSessionTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
     private val location = FakeLocationRepository()
@@ -64,8 +64,8 @@ class NavigationViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun test(body: suspend TestScope.(NavigationViewModel) -> Unit) = runTest(dispatcher) {
-        body(NavigationViewModel(location, routing, gira, settings, gpx, clock))
+    private fun test(body: suspend TestScope.(NavigationSession) -> Unit) = runTest(dispatcher) {
+        body(NavigationSession(location, routing, gira, settings, gpx, clock, backgroundScope))
     }
 
     private fun request(route: Route, rejoin: Boolean = false, trip: GiraTrip? = null) =

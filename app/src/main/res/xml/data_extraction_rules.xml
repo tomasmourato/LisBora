@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and later. Favourites, saved routes and preferences go with the backup; the data packs
+     (some 35 MB, over the 25 MB backup limit) come with the app or are downloaded again. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datapack/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datapack/" />
+    </device-transfer>
+</data-extraction-rules>

@@ -1,7 +1,9 @@
 package pt.lisbora.feature.discover
 
+import android.content.res.Resources
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import pt.lisbora.R
@@ -32,7 +34,9 @@ fun DiscoveryTweak.labelRes(): Int = when (this) {
 
 /** "estação GIRA 101", or its name when it has no number. */
 @Composable
-fun GiraStation.label(): String = number?.let { stringResource(R.string.discover_gira_station, it) } ?: name
+fun GiraStation.label(): String = label(LocalResources.current)
+
+fun GiraStation.label(res: Resources): String = number?.let { res.getString(R.string.discover_gira_station, it) } ?: name
 
 /** Time available: "45 min", "1 h", "1 h 30". */
 @Composable

@@ -2,11 +2,14 @@ package pt.lisbora.feature.navigation
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,6 +31,9 @@ class NavigationScreensTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    @Before
+    fun checkAccessibility() = composeRule.enableAccessibilityChecks()
+
     private val start = GeoPoint(38.7105, -9.1376)
     private val route: Route = run {
         val end = GeoPoint(38.7105, -9.1300)
@@ -44,6 +50,7 @@ class NavigationScreensTest {
     private class Recorder : NavigationActionsAdapter() {
         val calls = mutableListOf<String>()
         override fun onNavigationStop() { calls += "stop" }
+        override fun onToggleVoice() { calls += "voice" }
         override fun onGiraGoToStation() { calls += "go" }
         override fun onGiraSwapped() { calls += "swapped" }
         override fun onExportGpx() { calls += "gpx" }
@@ -72,7 +79,14 @@ class NavigationScreensTest {
         composeRule.onNodeWithText("Rua da Conceição").assertIsDisplayed()
         composeRule.onNodeWithText("2 min").assertIsDisplayed()
         composeRule.onNodeWithText("Terminar").performClick()
-        assertEquals(listOf("stop"), actions.calls)
+        composeRule.onNodeWithContentDescription("Desligar as indicações por voz").performClick()
+        assertEquals(listOf("stop", "voice"), actions.calls)
+    }
+
+    @Test
+    fun withTheVoiceOffTheButtonTurnsItOn() {
+        composeRule.setContent { LisboraTheme { NavigationBottom(NavigationUiState(active = true, route = route, voiceOn = false), Recorder()) } }
+        composeRule.onNodeWithContentDescription("Ligar as indicações por voz").assertIsDisplayed()
     }
 
     @Test

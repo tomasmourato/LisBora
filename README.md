@@ -1,6 +1,6 @@
 # LisBora
 
-App Android para andar de bicicleta em Lisboa. Gera rotas que privilegiam a rede ciclável e as ruas calmas, e sugere passeios automáticos para o tempo que tens disponível (lazer, paisagens, rio, desporto, subidas, descidas…).
+App Android para andar de bicicleta em Lisboa. Gera rotas que privilegiam a rede ciclável e as ruas calmas, e sugere passeios automáticos para o tempo que tens disponível (lazer, paisagens, rio, desporto, subidas, descidas…). Durante a volta, guia-te passo a passo, também por voz e com o ecrã desligado.
 
 As rotas são calculadas **no telemóvel**: não há servidor nem contas. A Internet é opcional e serve para duas coisas: no Descobrir com GIRA, a app lê as bicicletas e docas livres das estações (dados da EMEL); uma vez por dia, em Wi-Fi, procura dados novos (rede ciclável, ruas, estações GIRA), publicados todas as semanas num release do GitHub. Sem rede, funciona com os dados que tem. O plano completo está em [docs/PLANO.md](docs/PLANO.md).
 
@@ -15,12 +15,13 @@ As rotas são calculadas **no telemóvel**: não há servidor nem contas. A Inte
 | 4 | Descobrir (rotas automáticas) | ✅ |
 | 5 | Seguir rota | ✅ |
 | 6 | Atualização de dados sem nova versão da app | ✅ |
-| 7 | Polimento | — |
+| 7 | Polimento | ✅ |
 
 ## Estrutura
 
 - `app/` — app Android (Kotlin, Jetpack Compose, Material 3, Hilt).
 - `core/routing/` — biblioteca Kotlin/JVM pura partilhada pela app e pelo pipeline (grafo, router, alternativas, perigos, ETA, Descobrir, pesquisa offline).
+- `baselineprofile/` — testes que gravam o perfil de arranque da app e medem o arranque.
 - `pipeline/` — ferramenta de linha de comandos que constrói os pacotes de dados (rede ciclável da CML, mapa base, grafo de rotas a partir do OpenStreetMap com o GraphHopper, índice de pesquisa, pontos de interesse). Não corre no telemóvel.
 
 ## Compilar
@@ -55,7 +56,13 @@ Para verificar o Descobrir no grafo real (descobertas de referência, com tempos
 
 A app traz o grafo, o índice, os pontos de interesse e as estações GIRA no pacote embutido (`app/src/main/assets/datapack`). Para os atualizar, usa `--out app/src/main/assets/datapack` em `build`, `search` e `gira`.
 
+Para o release (`:app:assembleRelease` ou `:app:bundleRelease`), o perfil de arranque e a publicação na Google Play, ver [docs/PLAY_STORE.md](docs/PLAY_STORE.md).
+
 Depois de instalada, a app atualiza os dados sozinha: o workflow [Dados](.github/workflows/data.yml) reconstrói o pacote às segundas, corre as verificações de qualidade e, se os dados mudaram, publica-o no release `datapack`. A app descarrega só os ficheiros que mudaram e passa a usá-los no arranque seguinte.
+
+## Privacidade
+
+A LisBora não tem contas, publicidade nem estatísticas de utilização, e a localização nunca sai do telemóvel. Ver a [política de privacidade](docs/PRIVACIDADE.md).
 
 ## Dados e licenças
 

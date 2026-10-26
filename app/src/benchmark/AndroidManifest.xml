@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Lets :baselineprofile record the startup profile and time the startup of this non-debuggable build. -->
+    <application>
+        <profileable android:shell="true" />
+    </application>
+</manifest>

@@ -256,6 +256,24 @@ Cada fase termina com build, testes, instalação e execução no emulador e uma
 7. **Polimento**
    - Voz (TTS) e serviço em primeiro plano com o ecrã desligado.
    - Desempenho (perfil de arranque, tempo de rota), acessibilidade e preparação para a Play Store (política de privacidade).
+   - **Feito (26/10/2026).**
+     - Volta com o ecrã desligado: o estado da navegação passou do ecrã para a `NavigationSession` (singleton no scope da app); o `NavigationViewModel` é só uma camada por cima. O `NavigationService`, um serviço em primeiro plano do tipo localização iniciado com "Iniciar", mantém a volta com o ecrã desligado ou a app em segundo plano. A notificação mostra a próxima indicação, a rua, o tempo que falta e a hora de chegada, e tem o botão "Terminar". O serviço para sozinho no fim. A app pede a permissão de notificações na primeira volta (Android 13 ou mais recente); sem ela, ou sem localização em primeiro plano, a volta continua com o ecrã ligado.
+     - Voz: o `VoicePrompts` decide o que dizer e tem testes unitários.
+       - A próxima manobra é dita ~150 m antes e outra vez a 40 m, com a seguinte quando vem logo a seguir.
+       - Também diz os perigos a 150 m, a saída da rota, os avisos da GIRA e a chegada.
+       - Uma rua que só muda de nome aparece no ecrã mas não se diz.
+
+       O `VoiceGuide` usa o TTS do telemóvel em pt-PT (pt-BR, se for o único que existe) e baixa o volume da música enquanto fala. O botão de som da navegação liga e desliga a voz, e a escolha fica nas preferências. Sem voz em português, a app avisa. No emulador, uma volta simulada confirmou que, com o ecrã desligado, a notificação e a voz continuam. Na chegada, a voz disse "Chegaste ao destino.", o serviço parou e a notificação desapareceu. "Terminar", na notificação, acaba a volta.
+     - "Sobre a LisBora" abre-se nas preferências; a barra "Para onde vais?" ganhou um botão para elas. Mostra a versão, o que a app faz com os dados, a [política de privacidade](PRIVACIDADE.md), as fontes dos dados com as licenças e as licenças de código aberto completas (`assets/licenses/NOTICES.txt`). A cópia de segurança do Android leva os favoritos, as rotas guardadas e as preferências, mas não os pacotes de dados (~35 MB, acima do limite de 25 MB).
+     - Acessibilidade: os testes de UI correm com as verificações do Accessibility Test Framework (rótulos, tamanho dos alvos, contraste) em cada ação. A única falha encontrada foi uma linha vazia do perfil de elevação, que o leitor de ecrã anunciava como texto.
+     - Desempenho:
+       - O release usa R8 e redução de recursos. O APK tem 78 MB: ~35 MB de dados, e quase todo o resto são as bibliotecas nativas do MapLibre. As bibliotecas de 64 bits estão alinhadas a 16 KB.
+       - O perfil de arranque (Baseline Profile) está em `app/src/main/baseline-prof.txt` e é instalado pelo `profileinstaller`. Foi gravado pelo módulo `:baselineprofile` com o arranque, uma pesquisa e o Descobrir. No emulador, o arranque a frio até ao primeiro ecrã (8 arranques de cada) demorou 1989 ms de mediana sem o perfil e 1932 ms com ele. A diferença fica dentro da variação (1,5 a 2,7 s), porque no emulador o código corre no processador do PC. O ganho real mede-se num telemóvel com o mesmo comando (`StartupBenchmark`).
+       - No release, no emulador, a melhor rota de Chiado a Belém demora 380 ms e as três rotas 840 ms. No debug da Fase 3 eram ~750 ms e ~1,6 s.
+     - Play Store:
+       - A chave de assinatura do release é lida de `~/.gradle/gradle.properties`, nunca do repositório. Sem ela, o release é assinado com a chave de debug.
+       - O guia [PLAY_STORE.md](PLAY_STORE.md) diz o que falta fazer na Play Console.
+       - A atualização de dados a partir do GitHub foi verificada no release: o worker descarregou o pacote que o workflow publicou e, depois de "Reiniciar agora", a app passou a usar o grafo novo.
 
 Para o futuro, opcional:
 - Supabase (sincronização e partilha)

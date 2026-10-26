@@ -23,6 +23,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -32,6 +36,7 @@ import pt.lisbora.R
 import pt.lisbora.data.datapack.DataPackInfo
 import pt.lisbora.data.datapack.DataUpdateStatus
 import pt.lisbora.data.settings.RidingSettings
+import pt.lisbora.feature.about.AboutDialog
 import pt.lisbora.routing.eta.BikeType
 import pt.lisbora.routing.eta.RiderLevel
 import pt.lisbora.routing.weighting.TripPurpose
@@ -154,7 +159,17 @@ fun PreferencesContent(
         }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        SwitchRow(stringResource(R.string.prefs_voice), settings.voiceGuidance) { v -> onChange { it.copy(voiceGuidance = v) } }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         DataPackSection(info = dataInfo, status = dataStatus, onCheck = onCheckDataUpdates, onRestart = onRestart)
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        var aboutOpen by rememberSaveable { mutableStateOf(false) }
+        TextButton(onClick = { aboutOpen = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.prefs_about), modifier = Modifier.fillMaxWidth())
+        }
+        if (aboutOpen) AboutDialog(onDismiss = { aboutOpen = false })
 
         Button(onClick = onDone, modifier = Modifier.align(Alignment.End).padding(bottom = 8.dp)) {
             Text(stringResource(R.string.prefs_done))

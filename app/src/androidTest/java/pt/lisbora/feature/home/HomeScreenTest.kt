@@ -3,12 +3,14 @@ package pt.lisbora.feature.home
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,6 +28,9 @@ class HomeScreenTest {
 
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Before
+    fun checkAccessibility() = composeRule.enableAccessibilityChecks()
 
     private val readyMap = MapLoadState.Ready(
         MapData(

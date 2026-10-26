@@ -1,8 +1,10 @@
 package pt.lisbora.feature.planner
 
+import android.content.res.Resources
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import pt.lisbora.R
 import pt.lisbora.feature.map.labelRes
@@ -28,10 +30,12 @@ fun formatMetres(metres: Double): String = "${metres.roundToInt()} m"
 
 /** "7 min", "1 h 05 min"; at least one minute. */
 @Composable
-fun formatDuration(seconds: Double): String {
+fun formatDuration(seconds: Double): String = formatDuration(LocalResources.current, seconds)
+
+fun formatDuration(res: Resources, seconds: Double): String {
     val minutes = (seconds / 60).roundToInt().coerceAtLeast(1)
-    return if (minutes < 60) stringResource(R.string.duration_minutes, minutes)
-    else stringResource(R.string.duration_hours, minutes / 60, minutes % 60)
+    return if (minutes < 60) res.getString(R.string.duration_minutes, minutes)
+    else res.getString(R.string.duration_hours, minutes / 60, minutes % 60)
 }
 
 @StringRes

@@ -24,6 +24,9 @@ rootProject.name = "LisBora"
 
 // The data workflow (.github/workflows/data.yml) passes -Plisbora.semApp=true: it only runs the
 // pipeline, so it needs neither the Android SDK nor the app's configuration.
-if (providers.gradleProperty("lisbora.semApp").orNull != "true") include(":app")
+if (providers.gradleProperty("lisbora.semApp").orNull != "true") {
+    include(":app")
+    include(":baselineprofile")
+}
 include(":core:routing")
 include(":pipeline")

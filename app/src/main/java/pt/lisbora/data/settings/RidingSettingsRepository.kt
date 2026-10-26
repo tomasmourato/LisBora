@@ -21,7 +21,7 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** The rider's saved choices for planning routes. */
+/** The rider's saved choices for planning and following routes. */
 data class RidingSettings(
     val bike: BikeType = BikeType.CITY,
     val level: RiderLevel = RiderLevel.MEDIUM,
@@ -34,6 +34,8 @@ data class RidingSettings(
     val allowFerries: Boolean = true,
     /** The rider's own pace against the model (above 1 = faster), learnt from finished rides. */
     val personalFactor: Double = 1.0,
+    /** Spoken instructions while riding. */
+    val voiceGuidance: Boolean = true,
 ) {
     fun toRoutingPreferences() = RoutingPreferences(
         rider = RiderProfile(bike = bike, level = level, personalFactor = personalFactor),
@@ -86,6 +88,7 @@ class DataStoreRidingSettingsRepository @Inject constructor(
             preferSegregated = p[PREFER_SEGREGATED] ?: defaults.preferSegregated,
             allowFerries = p[ALLOW_FERRIES] ?: defaults.allowFerries,
             personalFactor = p[PERSONAL_FACTOR]?.takeIf { it in RidingSettings.PERSONAL_FACTOR_RANGE } ?: defaults.personalFactor,
+            voiceGuidance = p[VOICE_GUIDANCE] ?: defaults.voiceGuidance,
         )
     }
 
@@ -99,6 +102,7 @@ class DataStoreRidingSettingsRepository @Inject constructor(
         p[PREFER_SEGREGATED] = s.preferSegregated
         p[ALLOW_FERRIES] = s.allowFerries
         p[PERSONAL_FACTOR] = s.personalFactor
+        p[VOICE_GUIDANCE] = s.voiceGuidance
     }
 
     private companion object {
@@ -111,5 +115,6 @@ class DataStoreRidingSettingsRepository @Inject constructor(
         val PREFER_SEGREGATED = booleanPreferencesKey("prefer_segregated")
         val ALLOW_FERRIES = booleanPreferencesKey("allow_ferries")
         val PERSONAL_FACTOR = doublePreferencesKey("personal_factor")
+        val VOICE_GUIDANCE = booleanPreferencesKey("voice_guidance")
     }
 }

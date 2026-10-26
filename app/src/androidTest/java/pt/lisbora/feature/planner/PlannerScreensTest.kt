@@ -1,6 +1,7 @@
 package pt.lisbora.feature.planner
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -10,6 +11,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,6 +33,9 @@ class PlannerScreensTest {
 
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Before
+    fun checkAccessibility() = composeRule.enableAccessibilityChecks()
 
     private val torre = Place("Torre de Belém", PlaceCategory.MONUMENT, GeoPoint(38.6916, -9.2160), "Belém, Lisboa")
 
