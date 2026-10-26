@@ -76,4 +76,11 @@ object GiraStations {
      */
     fun nearest(stations: List<GiraStation>, point: GeoPoint, maxDistanceM: Double, accept: (GiraStation) -> Boolean = { true }): GiraStation? =
         stations.filter(accept).minByOrNull { it.point.distanceTo(point) }?.takeIf { it.point.distanceTo(point) <= maxDistanceM }
+
+    /**
+     * Where to swap bikes near [point] before a trip's 45 minutes are up: the nearest station with a free
+     * dock and another bike to take, else the nearest with a free dock.
+     */
+    fun forSwap(stations: List<GiraStation>, point: GeoPoint, maxDistanceM: Double): GiraStation? =
+        nearest(stations, point, maxDistanceM) { it.hasFreeDock && it.hasBike } ?: nearest(stations, point, maxDistanceM) { it.hasFreeDock }
 }

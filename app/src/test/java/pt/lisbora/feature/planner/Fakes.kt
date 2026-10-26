@@ -1,11 +1,14 @@
 package pt.lisbora.feature.planner
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import pt.lisbora.data.discover.DiscoveryRepository
 import pt.lisbora.data.gira.GiraRepository
 import pt.lisbora.data.gira.GiraStation
+import pt.lisbora.data.gpx.GpxFiles
+import pt.lisbora.data.location.LocationFix
 import pt.lisbora.data.location.LocationRepository
 import pt.lisbora.data.routing.RoutingRepository
 import pt.lisbora.data.saved.SavedKind
@@ -100,14 +103,26 @@ class FakeRoutingRepository : RoutingRepository {
         return result
     }
 
+    var alongResult: RouteResult = RouteResult.Failure(RouteResult.Reason.NO_PATH)
+    val tracks = mutableListOf<List<GeoPoint>>()
+
+    override suspend fun routeAlong(track: List<GeoPoint>, preferences: RoutingPreferences): RouteResult {
+        tracks += track
+        return alongResult
+    }
+
     override suspend fun streetName(point: GeoPoint, maxDistanceM: Double): String? = null
 
     override suspend fun warmUp() = Unit
 }
 
 class FakeLocationRepository(var permission: Boolean = true, var location: GeoPoint? = Baixa) : LocationRepository {
+    /** Fixes sent to whoever follows the position (navigation). */
+    val fixes = MutableSharedFlow<LocationFix>(extraBufferCapacity = 64)
+
     override fun hasPermission() = permission
     override suspend fun currentLocation(): GeoPoint? = if (permission) location else null
+    override fun updates(intervalMs: Long): Flow<LocationFix> = fixes
 }
 
 class FakeSettingsRepository : RidingSettingsRepository {
@@ -184,6 +199,8 @@ class FakeDiscoveryRepository : DiscoveryRepository {
         return rebuilt
     }
 
+    override suspend fun describe(route: Route, stops: List<GeoPoint>): DiscoveredRoute = fakeDiscovered(route, stops = stops)
+
     override suspend fun warmUp() {
         warmUps++
     }
@@ -211,4 +228,21 @@ class FakeSavedRoutesRepository : SavedRoutesRepository {
 
 class FakeGiraRepository(var stations: List<GiraStation> = emptyList()) : GiraRepository {
     override suspend fun stations(): List<GiraStation> = stations
+}
+
+class FakeGpxFiles : GpxFiles {
+    val written = mutableMapOf<String, String>()
+    val files = mutableMapOf<String, String>()
+    override suspend fun write(uri: String, gpx: String) {
+        written[uri] = gpx
+    }
+    override suspend fun read(uri: String): String = files[uri] ?: throw java.io.IOException("No file $uri")
+}
+
+/** A clock the test moves by hand. */
+class MutableClock(var millis: Long = 1_761_490_800_000L) : java.time.Clock() {
+    override fun getZone(): java.time.ZoneId = java.time.ZoneOffset.UTC
+    override fun withZone(zone: java.time.ZoneId?): java.time.Clock = this
+    override fun instant(): java.time.Instant = java.time.Instant.ofEpochMilli(millis)
+    override fun millis(): Long = millis
 }

@@ -22,6 +22,8 @@ import pt.lisbora.data.gira.BundledGiraRepository
 import pt.lisbora.data.gira.GiraRepository
 import pt.lisbora.data.gira.LiveGiraRepository
 import pt.lisbora.data.gira.VaimooGiraFeed
+import pt.lisbora.data.gpx.ContentGpxFiles
+import pt.lisbora.data.gpx.GpxFiles
 import pt.lisbora.data.location.AndroidLocationRepository
 import pt.lisbora.data.location.LocationRepository
 import pt.lisbora.data.map.BundledMapDataRepository
@@ -119,4 +121,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun discoveryRepository(impl: GraphDiscoveryRepository): DiscoveryRepository
+
+    @Binds
+    abstract fun gpxFiles(impl: ContentGpxFiles): GpxFiles
 }

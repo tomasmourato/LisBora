@@ -89,6 +89,9 @@ sealed interface PlannerMode {
         val detailsExpanded: Boolean = false,
     ) : PlannerMode {
         val options: List<DiscoverOption> get() = (results as? DiscoverResults.Ready)?.options.orEmpty()
+
+        /** Showing a route that follows an imported GPX file. */
+        val isImported: Boolean get() = (results as? DiscoverResults.Ready)?.imported != null
         val selectedOption: DiscoverOption? get() = options.getOrNull(selected)
     }
 

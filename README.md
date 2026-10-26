@@ -13,7 +13,7 @@ As rotas são calculadas **no telemóvel**: não há servidor nem contas. A úni
 | 2 | Grafo e router (JVM) | ✅ |
 | 3 | Planear A→B | ✅ |
 | 4 | Descobrir (rotas automáticas) | ✅ |
-| 5 | Seguir rota | — |
+| 5 | Seguir rota | ✅ |
 | 6 | Atualização de dados sem nova versão da app | — |
 | 7 | Polimento | — |
 

@@ -17,6 +17,7 @@ import pt.lisbora.data.datapack.DataPackStore
 import pt.lisbora.data.routing.RoutingEngineStore
 import pt.lisbora.data.saved.SavedRoute
 import pt.lisbora.di.DefaultDispatcher
+import pt.lisbora.routing.Route
 import pt.lisbora.routing.discover.DiscoveredRoute
 import pt.lisbora.routing.discover.DiscoveryEngine
 import pt.lisbora.routing.discover.DiscoveryRequest
@@ -37,6 +38,9 @@ interface DiscoveryRepository {
 
     /** A saved route computed again with today's data; null when that is no longer possible. */
     suspend fun rebuild(saved: SavedRoute, preferences: RoutingPreferences): DiscoveredRoute?
+
+    /** A route found elsewhere (an imported GPX) with the river, parks and places it passes, for its card. */
+    suspend fun describe(route: Route, stops: List<GeoPoint>): DiscoveredRoute
 
     /** Prepares the engine (points of interest, network parts) before the first discovery. */
     suspend fun warmUp()
@@ -71,6 +75,11 @@ class GraphDiscoveryRepository @Inject constructor(
     override suspend fun rebuild(saved: SavedRoute, preferences: RoutingPreferences): DiscoveredRoute? {
         val engine = engine()
         return withContext(compute) { engine.rebuild(saved.stops, saved.purpose, saved.tweaks, preferences, saved.turnsBack) }
+    }
+
+    override suspend fun describe(route: Route, stops: List<GeoPoint>): DiscoveredRoute {
+        val engine = engine()
+        return withContext(compute) { engine.describe(route, stops) }
     }
 
     override suspend fun warmUp() {

@@ -66,6 +66,7 @@ import pt.lisbora.feature.planner.InfraBar
 import pt.lisbora.feature.planner.PlannerActions
 import pt.lisbora.feature.planner.PlannerMode
 import pt.lisbora.feature.planner.RouteDetails
+import pt.lisbora.feature.planner.StartAndDetails
 import pt.lisbora.feature.planner.formatDuration
 import pt.lisbora.feature.planner.formatMetres
 import pt.lisbora.routing.discover.DiscoveryPurpose
@@ -78,6 +79,7 @@ interface DiscoverActions {
     fun onDiscoverMinutes(minutes: Int)
     fun onDiscoverPurpose(purpose: DiscoveryPurpose)
     fun onDiscoverGira(on: Boolean)
+    fun onImportGpx()
     fun onDiscoverSearch()
     fun onDiscoverAnother()
     fun onDiscoverTweak(tweak: DiscoveryTweak)
@@ -127,6 +129,8 @@ fun DiscoverPanel(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
                         if (results.reason == DiscoverFailure.LOCATION_UNAVAILABLE) {
                             Button(onClick = actions::onChooseOrigin) { Text(stringResource(R.string.directions_choose_origin)) }
+                        } else if (results.reason.isGpx) {
+                            Button(onClick = actions::onImportGpx) { Text(stringResource(R.string.discover_import_other)) }
                         } else if (results.reason != DiscoverFailure.SAVED_UNAVAILABLE) {
                             Button(onClick = actions::onRetry) { Text(stringResource(R.string.routes_retry)) }
                         }
@@ -197,6 +201,11 @@ private fun SetupContent(
                     SavedRouteRow(route, onOpen = { actions.onSavedRouteOpen(route) }, onRemove = { actions.onSavedRouteRemove(route) })
                 }
             }
+        }
+        OutlinedButton(onClick = actions::onImportGpx, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Icon(painterResource(R.drawable.ic_map), contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.discover_import_gpx))
         }
     }
 }
@@ -336,7 +345,8 @@ private fun ResultsContent(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
-        if (!ready.directOnly) {
+        // A route that follows a GPX file is that route: no other one, no adjustments, nothing to save.
+        if (!ready.directOnly && ready.imported == null) {
             AssistChip(
                 onClick = actions::onDiscoverAnother,
                 label = { Text(stringResource(R.string.discover_another)) },
@@ -350,7 +360,7 @@ private fun ResultsContent(
                 )
             }
         }
-        AssistChip(
+        if (ready.imported == null) AssistChip(
             onClick = actions::onDiscoverSave,
             label = { Text(stringResource(if (saved) R.string.discover_saved_label else R.string.discover_save)) },
             leadingIcon = {
@@ -380,14 +390,7 @@ private fun ResultsContent(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
         )
     }
-    TextButton(onClick = actions::onToggleDetails, modifier = Modifier.padding(start = 8.dp)) {
-        Icon(
-            painterResource(if (discover.detailsExpanded) R.drawable.ic_expand_more else R.drawable.ic_expand_less),
-            contentDescription = null,
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(stringResource(if (discover.detailsExpanded) R.string.route_details_hide else R.string.route_details_show))
-    }
+    StartAndDetails(discover.detailsExpanded, actions)
     if (discover.detailsExpanded) {
         RouteDetails(
             option = selected.option,

@@ -140,6 +140,28 @@ object RouteAnalysis {
         return steepest * 100
     }
 
+    /** Shortest stretch over which [Route.maxGradePercent] is measured. */
+    const val GRADE_WINDOW_M = 30.0
+
+    /**
+     * Steepest uphill grade, in percent, over any stretch of at least [GRADE_WINDOW_M] of a profile given
+     * as [distances] along and [elevations] (the whole profile if shorter).
+     */
+    fun steepestClimbPercent(distances: List<Double>, elevations: List<Double>): Double {
+        if (distances.size < 2) return 0.0
+        val total = distances.last() - distances.first()
+        if (total < GRADE_WINDOW_M) return max(0.0, (elevations.last() - elevations.first()) / GRADE_WINDOW_M) * 100
+        var steepest = 0.0
+        var j = 0
+        for (i in distances.indices) {
+            if (j < i) j = i
+            while (j < distances.size - 1 && distances[j] - distances[i] < GRADE_WINDOW_M) j++
+            val run = distances[j] - distances[i]
+            if (run >= GRADE_WINDOW_M) steepest = max(steepest, (elevations[j] - elevations[i]) / run)
+        }
+        return steepest * 100
+    }
+
     /** The point at [distance] metres along [route], interpolated between its shape points. */
     fun pointAt(route: Route, distance: Double): GeoPoint {
         val d = route.distances

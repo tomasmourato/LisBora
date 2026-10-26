@@ -12,4 +12,7 @@ object MapDefaults {
     /** The basemap stops at z15; MapLibre overzooms vector tiles up to here. */
     const val MAX_ZOOM = 19.0
     const val LOCATION_ZOOM = 15.5
+
+    /** Close enough to see the next junction while riding. */
+    const val NAVIGATION_ZOOM = 16.5
 }

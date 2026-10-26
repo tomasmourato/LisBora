@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -31,9 +32,11 @@ data class RidingSettings(
     val avoidTramTracks: Boolean = false,
     val preferSegregated: Boolean = false,
     val allowFerries: Boolean = true,
+    /** The rider's own pace against the model (above 1 = faster), learnt from finished rides. */
+    val personalFactor: Double = 1.0,
 ) {
     fun toRoutingPreferences() = RoutingPreferences(
-        rider = RiderProfile(bike = bike, level = level),
+        rider = RiderProfile(bike = bike, level = level, personalFactor = personalFactor),
         purpose = purpose,
         maxGradePercent = maxGradePercent?.toDouble(),
         avoidCobbles = avoidCobbles,
@@ -45,6 +48,9 @@ data class RidingSettings(
     companion object {
         /** Choices offered for the maximum grade. */
         val MAX_GRADE_OPTIONS: List<Int?> = listOf(null, 5, 8, 10, 12)
+
+        /** Range of the learnt pace, well inside what [RiderProfile] accepts. */
+        val PERSONAL_FACTOR_RANGE = 0.6..1.6
     }
 }
 
@@ -79,6 +85,7 @@ class DataStoreRidingSettingsRepository @Inject constructor(
             avoidTramTracks = p[AVOID_TRAMS] ?: defaults.avoidTramTracks,
             preferSegregated = p[PREFER_SEGREGATED] ?: defaults.preferSegregated,
             allowFerries = p[ALLOW_FERRIES] ?: defaults.allowFerries,
+            personalFactor = p[PERSONAL_FACTOR]?.takeIf { it in RidingSettings.PERSONAL_FACTOR_RANGE } ?: defaults.personalFactor,
         )
     }
 
@@ -91,6 +98,7 @@ class DataStoreRidingSettingsRepository @Inject constructor(
         p[AVOID_TRAMS] = s.avoidTramTracks
         p[PREFER_SEGREGATED] = s.preferSegregated
         p[ALLOW_FERRIES] = s.allowFerries
+        p[PERSONAL_FACTOR] = s.personalFactor
     }
 
     private companion object {
@@ -102,5 +110,6 @@ class DataStoreRidingSettingsRepository @Inject constructor(
         val AVOID_TRAMS = booleanPreferencesKey("avoid_tram_tracks")
         val PREFER_SEGREGATED = booleanPreferencesKey("prefer_segregated")
         val ALLOW_FERRIES = booleanPreferencesKey("allow_ferries")
+        val PERSONAL_FACTOR = doublePreferencesKey("personal_factor")
     }
 }

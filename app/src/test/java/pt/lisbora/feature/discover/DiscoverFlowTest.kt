@@ -21,6 +21,7 @@ import pt.lisbora.feature.planner.Endpoint
 import pt.lisbora.data.gira.GiraStation
 import pt.lisbora.feature.planner.FakeDiscoveryRepository
 import pt.lisbora.feature.planner.FakeGiraRepository
+import pt.lisbora.feature.planner.FakeGpxFiles
 import pt.lisbora.feature.planner.FakeLocationRepository
 import pt.lisbora.feature.planner.FakeRoutingRepository
 import pt.lisbora.feature.planner.FakeSavedPlacesRepository
@@ -52,6 +53,8 @@ class DiscoverFlowTest {
     private val discovery = FakeDiscoveryRepository()
     private val savedRoutes = FakeSavedRoutesRepository()
     private val gira = FakeGiraRepository()
+    private val gpxFiles = FakeGpxFiles()
+    private val routing = FakeRoutingRepository()
 
     private val torre = Place("Torre de Belém", PlaceCategory.MONUMENT, Belem, "Belém, Lisboa")
     private val loop = fakeDiscovered(fakeRoute(listOf(Baixa, GeoPoint(38.705, -9.150), GeoPoint(38.708, -9.145), Baixa), durationS = 2700.0))
@@ -67,7 +70,7 @@ class DiscoverFlowTest {
         body(viewModel())
     }
 
-    private fun viewModel() = PlannerViewModel(search, FakeRoutingRepository(), location, settings, FakeSavedPlacesRepository(), discovery, savedRoutes, gira)
+    private fun viewModel() = PlannerViewModel(search, routing, location, settings, FakeSavedPlacesRepository(), discovery, savedRoutes, gira, gpxFiles)
 
     private fun PlannerViewModel.discover() = uiState.value.mode as PlannerMode.Discover
 
@@ -324,5 +327,62 @@ class DiscoverFlowTest {
         assertTrue(vm.discover().setup.gira)
         assertTrue(discovery.rebuildPreferences.single().stayInLisbon)
         assertEquals(rossio, (vm.discover().results as DiscoverResults.Ready).gira!!.pickUp)
+    }
+
+    // --- GPX ----------------------------------------------------------------------------------
+
+    /** Baixa to Belém along the river, a point every 100 m or so. */
+    private val track = (0..60).map { i -> GeoPoint(38.7105 - i * 0.000225, -9.1376 - i * 0.00114) }
+
+    @Test
+    fun `a GPX file is followed on its streets and ready to ride, under its name`() = test { vm ->
+        gpxFiles.files["content://gpx/rio"] = pt.lisbora.routing.io.Gpx.write("Rio ao domingo", track.map { pt.lisbora.routing.io.TrackPoint(it) })
+        val followed = fakeRoute(listOf(Baixa, GeoPoint(38.704, -9.170), Belem), durationS = 2400.0)
+        routing.alongResult = pt.lisbora.routing.RouteResult.Success(followed)
+        vm.onDiscoverOpen()
+        vm.onGpxImport("content://gpx/rio")
+
+        // Read back from the file, to the 6 decimals GPX keeps.
+        val read = routing.tracks.single()
+        assertEquals(track.size, read.size)
+        assertTrue(read.zip(track).all { (a, b) -> a.distanceTo(b) < 0.2 })
+        val mode = vm.discover()
+        assertTrue(mode.isImported)
+        val ready = mode.results as DiscoverResults.Ready
+        assertEquals("Rio ao domingo", ready.imported)
+        assertEquals(followed, ready.options.single().discovered.route)
+        assertEquals(0.0, track.first().distanceTo((mode.setup.start as Endpoint.AtPlace).place.point), 0.2)
+        assertTrue(mode.setup.toDestination)
+        assertEquals(0.0, track.last().distanceTo((mode.setup.end as Endpoint.AtPlace).place.point), 0.2)
+
+        val request = vm.navigationRequest()!!
+        assertEquals("LisBora · Rio ao domingo", request.title)
+        assertTrue(request.rejoin)
+
+        // New preferences change what Descobrir finds, not an imported route.
+        vm.onSettingsChange { it.copy(avoidCobbles = true) }
+        assertTrue(discovery.requests.isEmpty())
+        assertEquals(followed, vm.discover().selectedOption!!.discovered.route)
+    }
+
+    @Test
+    fun `a GPX that cannot be followed says why`() = test { vm ->
+        vm.onDiscoverOpen()
+        vm.onGpxImport("content://gpx/missing")
+        assertEquals(DiscoverResults.Failed(DiscoverFailure.GPX_UNREADABLE), vm.discover().results)
+
+        gpxFiles.files["content://gpx/empty"] = "<gpx><trk><name>Nada</name></trk></gpx>"
+        vm.onGpxImport("content://gpx/empty")
+        assertEquals(DiscoverResults.Failed(DiscoverFailure.GPX_EMPTY), vm.discover().results)
+
+        val porto = listOf(GeoPoint(41.15, -8.61), GeoPoint(41.16, -8.62))
+        gpxFiles.files["content://gpx/porto"] = pt.lisbora.routing.io.Gpx.write("Porto", porto.map { pt.lisbora.routing.io.TrackPoint(it) })
+        vm.onGpxImport("content://gpx/porto")
+        assertEquals(DiscoverResults.Failed(DiscoverFailure.GPX_OUTSIDE), vm.discover().results)
+        assertTrue((vm.discover().results as DiscoverResults.Failed).reason.isGpx)
+
+        gpxFiles.files["content://gpx/rio"] = pt.lisbora.routing.io.Gpx.write("Rio", track.map { pt.lisbora.routing.io.TrackPoint(it) })
+        vm.onGpxImport("content://gpx/rio")
+        assertEquals(DiscoverResults.Failed(DiscoverFailure.GPX_NO_ROUTE), vm.discover().results)
     }
 }

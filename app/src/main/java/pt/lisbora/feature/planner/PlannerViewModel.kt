@@ -16,6 +16,7 @@ import pt.lisbora.data.discover.DiscoveryRepository
 import pt.lisbora.data.gira.GiraRepository
 import pt.lisbora.data.gira.GiraStation
 import pt.lisbora.data.gira.GiraStations
+import pt.lisbora.data.gpx.GpxFiles
 import pt.lisbora.data.location.LocationRepository
 import pt.lisbora.data.routing.RoutingRepository
 import pt.lisbora.data.routing.RoutingUnavailableException
@@ -35,12 +36,15 @@ import pt.lisbora.feature.discover.GiraTrip
 import pt.lisbora.feature.discover.matching
 import pt.lisbora.feature.discover.toGiraPreferences
 import pt.lisbora.feature.map.MapDefaults
+import pt.lisbora.feature.navigation.NavigationRequest
 import pt.lisbora.routing.Route
 import pt.lisbora.routing.RouteResult
 import pt.lisbora.routing.discover.DiscoveryPurpose
 import pt.lisbora.routing.discover.DiscoveryRequest
 import pt.lisbora.routing.discover.DiscoveryResult
 import pt.lisbora.routing.discover.DiscoveryTweak
+import pt.lisbora.routing.io.Gpx
+import pt.lisbora.routing.navigation.TrackMatcher
 import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.geo.ServiceArea
 import pt.lisbora.routing.search.Place
@@ -61,6 +65,7 @@ class PlannerViewModel @Inject constructor(
     private val discovery: DiscoveryRepository,
     private val savedRoutes: SavedRoutesRepository,
     private val gira: GiraRepository,
+    private val gpxFiles: GpxFiles,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlannerUiState())
@@ -84,7 +89,8 @@ class PlannerViewModel @Inject constructor(
                 if (changed) {
                     when (val mode = _uiState.value.mode) {
                         is PlannerMode.Directions -> computeRoutes(mode)
-                        is PlannerMode.Discover -> if (mode.results != DiscoverResults.None) computeDiscovery(mode)
+                        // An imported GPX keeps its route: the preferences only change what Descobrir finds.
+                        is PlannerMode.Discover -> if (mode.results != DiscoverResults.None && !mode.isImported) computeDiscovery(mode)
                         else -> Unit
                     }
                 }
@@ -445,6 +451,38 @@ class PlannerViewModel @Inject constructor(
         Endpoint.MyLocation -> location.currentLocation()?.also { p -> _uiState.update { it.copy(userLocation = p) } }
     }
 
+    // --- navigation -------------------------------------------------------------------------
+
+    /** What "Iniciar" follows: the selected A→B or Descobrir route, with the preferences to recompute it. */
+    fun navigationRequest(): NavigationRequest? {
+        val s = _uiState.value
+        return when (val mode = s.mode) {
+            is PlannerMode.Directions -> mode.selectedOption?.route?.let { route ->
+                val name = (mode.destination as? Endpoint.AtPlace)?.place?.name?.ifBlank { null }
+                NavigationRequest(
+                    route = route,
+                    destination = route.points.last(),
+                    rejoin = false,
+                    preferences = s.settings.toRoutingPreferences(),
+                    title = listOfNotNull(TITLE, name).joinToString(" · "),
+                )
+            }
+            is PlannerMode.Discover -> mode.selectedOption?.let { option ->
+                val route = option.discovered.route
+                val imported = (mode.results as? DiscoverResults.Ready)?.imported?.ifBlank { null }
+                NavigationRequest(
+                    route = route,
+                    destination = route.points.last(),
+                    rejoin = true,
+                    preferences = if (mode.setup.gira) s.settings.toGiraPreferences() else s.settings.toRoutingPreferences(),
+                    title = listOfNotNull(TITLE, imported ?: option.places.firstOrNull()?.name).joinToString(" · "),
+                    gira = (mode.results as? DiscoverResults.Ready)?.gira,
+                )
+            }
+            else -> null
+        }
+    }
+
     // --- discover ---------------------------------------------------------------------------
 
     /** The "Descobrir" button: from my location when allowed, else the start is chosen first. */
@@ -551,6 +589,53 @@ class PlannerViewModel @Inject constructor(
                 DiscoverResults.Failed(DiscoverFailure.UNAVAILABLE)
             }
             showDiscovery(results)
+        }
+    }
+
+    /**
+     * A GPX file to follow (from another app, a friend, an older ride): read, followed on the streets it
+     * keeps to, and shown like a Descobrir route, ready for "Iniciar".
+     */
+    fun onGpxImport(uri: String) {
+        discoverJob?.cancel()
+        val mode = _uiState.value.mode as? PlannerMode.Discover ?: PlannerMode.Discover(DiscoverSetup(start = null))
+        _uiState.update { it.copy(mode = mode.copy(results = DiscoverResults.Loading, selected = 0, detailsExpanded = false)) }
+        val settings = _uiState.value.settings
+        discoverJob = viewModelScope.launch {
+            val results = try {
+                importGpx(uri, settings)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                DiscoverResults.Failed(DiscoverFailure.GPX_UNREADABLE)
+            }
+            showDiscovery(results)
+        }
+    }
+
+    private suspend fun importGpx(uri: String, settings: RidingSettings): DiscoverResults {
+        val xml = gpxFiles.read(uri)
+        val track = Gpx.parse(xml)
+        if (TrackMatcher.stops(track).size < 2) return DiscoverResults.Failed(DiscoverFailure.GPX_EMPTY)
+        if (track.first() !in ServiceArea.BOUNDS || track.last() !in ServiceArea.BOUNDS) return DiscoverResults.Failed(DiscoverFailure.GPX_OUTSIDE)
+        // Where it starts and ends, named like any pin; a track that ends where it began is a loop.
+        val start = Place(name = "", category = PlaceCategory.OTHER, point = track.first())
+        val end = Place(name = "", category = PlaceCategory.OTHER, point = track.last()).takeIf { track.first().distanceTo(track.last()) >= GPX_LOOP_M }
+        updateDiscover {
+            it.copy(setup = it.setup.copy(start = Endpoint.AtPlace(start), toDestination = end != null, end = end?.let { e -> Endpoint.AtPlace(e) }, gira = false))
+        }
+        listOfNotNull(start, end).forEach { pin ->
+            viewModelScope.launch { runCatching { search.describe(pin.point) }.getOrNull()?.let { replacePin(pin, it) } }
+        }
+        return when (val result = routing.routeAlong(track, settings.toRoutingPreferences())) {
+            is RouteResult.Success -> {
+                val discovered = discovery.describe(result.route, TrackMatcher.stops(track))
+                DiscoverResults.Ready(
+                    DiscoverOptions.from(listOf(discovered), DiscoveryPurpose.LEISURE, settings.maxGradePercent),
+                    imported = Gpx.name(xml).orEmpty(),
+                )
+            }
+            is RouteResult.Failure -> DiscoverResults.Failed(DiscoverFailure.GPX_NO_ROUTE)
         }
     }
 
@@ -715,8 +800,14 @@ class PlannerViewModel @Inject constructor(
         /** Origin and destination closer than this are the same place. */
         const val MIN_TRIP_M = 20.0
 
+        /** Name of a ride in its GPX file, before the place it goes to. */
+        private const val TITLE = "LisBora"
+
         /** Farthest a rider is sent on foot to take or return a GIRA bike. */
         const val MAX_GIRA_WALK_M = 1500.0
+
+        /** A GPX track ending this close to where it began is a loop. */
+        private const val GPX_LOOP_M = 100.0
 
         /** A saved GIRA ride's first and last stops are its stations. */
         private const val SAVED_STATION_M = 100.0

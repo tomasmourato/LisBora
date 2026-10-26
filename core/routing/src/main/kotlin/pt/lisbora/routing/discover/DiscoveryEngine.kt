@@ -112,6 +112,13 @@ class DiscoveryEngine(
         return DiscoveredRoute(route, stops, anchors, turnsBack, highlights(route, anchors, profile), score = 0.0)
     }
 
+    /**
+     * A route found elsewhere (an imported GPX) described as Descobrir describes its own, for its card:
+     * the river, parks and places it passes. It may turn back at its [stops], as the track did.
+     */
+    fun describe(route: Route, stops: List<GeoPoint>, purpose: DiscoveryPurpose = DiscoveryPurpose.LEISURE): DiscoveredRoute =
+        DiscoveredRoute(route, stops, emptyList(), turnsBack = true, highlights(route, emptyList(), DiscoveryProfile.of(purpose)), score = 0.0)
+
     /** A stop on a rideable street of [component], preferably a calm one or one with infrastructure. */
     private fun snapVia(point: GeoPoint, preferences: RoutingPreferences, component: Int): Snap? =
         routing.snap(point, preferences, VIA_SNAP_NEAR_M) { e ->

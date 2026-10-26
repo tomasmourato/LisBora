@@ -12,6 +12,7 @@ import pt.lisbora.pipeline.qa.DiscoverCommand
 import pt.lisbora.pipeline.qa.GoldenConfig
 import pt.lisbora.pipeline.qa.GoldenDiscoveries
 import pt.lisbora.pipeline.qa.GoldenRoutesCommand
+import pt.lisbora.pipeline.qa.RouteCommand
 import pt.lisbora.pipeline.search.BuildSearchCommand
 import pt.lisbora.pipeline.search.GoldenSearchConfig
 import pt.lisbora.pipeline.search.PoiCatalog
@@ -52,6 +53,9 @@ internal val USAGE = """
                               Corre as descobertas de referência (${GoldenDiscoveries.DEFAULT_FILE}) com tempos
                               de cálculo; --amostra N acrescenta N descobertas aleatórias (sempre as mesmas);
                               --detalhe sim mostra todas as candidatas.
+      route --de LAT,LON --para LAT,LON [--graph FICHEIRO] [--gpx FICHEIRO]
+                              Uma rota com as preferências por omissão da app e as instruções; --gpx
+                              escreve-a em GPX (para simular uma volta no emulador).
 
     Opções:
       --out DIR    Pasta do pacote de dados (por omissão: $DEFAULT_PACK_DIR).
@@ -121,6 +125,12 @@ internal fun run(args: List<String>, out: PrintStream): Int {
             threads = options["fios"]?.toIntOrNull() ?: DiscoverCommand.DEFAULT_THREADS,
             heuristicWeight = options["heuristica"]?.toDoubleOrNull() ?: DiscoveryEngine.DEFAULT_HEURISTIC_WEIGHT,
             detailed = options["detalhe"] == "sim",
+        )
+        "route" -> RouteCommand(out).run(
+            graphFile = Path(options["graph"] ?: "$DEFAULT_PACK_DIR/${GraphFormat.FILE_NAME}"),
+            from = options["de"],
+            to = options["para"],
+            gpxFile = options["gpx"]?.let(::Path),
         )
         else -> {
             out.println("Comando desconhecido: $command")

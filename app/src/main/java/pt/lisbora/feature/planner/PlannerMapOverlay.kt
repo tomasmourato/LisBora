@@ -76,7 +76,7 @@ fun plannerOverlay(mode: PlannerMode, palette: RoutePalette, giraStations: List<
 }
 
 /** "GIRA 101" next to a station's marker: a brand and a number, the same in every language. */
-private fun GiraStation.mapLabel(): String = number?.let { "GIRA $it" } ?: name
+internal fun GiraStation.mapLabel(): String = number?.let { "GIRA $it" } ?: name
 
 /** Named places of a discovered route drawn on the map (the ones it was built through first). */
 const val MAX_PLACE_MARKERS = 8

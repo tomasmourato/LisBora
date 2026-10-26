@@ -67,6 +67,8 @@ private const val PADDING_SETTLE_FRAMES = 3
  * In [pickMode] a tap reports a point ([onPointPicked]) instead of selecting a segment.
  * [dimCycleNetwork] fades the network while a route is shown, so the route stands out.
  * [poiLayers] are the point-of-interest layers switched on in the legend.
+ * While [followUser] (navigation) the camera follows the rider, turned to their heading; a gesture stops it
+ * and a new [followRequest] starts it again.
  */
 @Composable
 fun LisboraMap(
@@ -86,6 +88,8 @@ fun LisboraMap(
     pickMode: Boolean = false,
     dimCycleNetwork: Boolean = false,
     poiLayers: Set<PoiLayer> = emptySet(),
+    followUser: Boolean = false,
+    followRequest: Int = 0,
     onLongPress: (GeoPoint) -> Unit = {},
     onPointPicked: (GeoPoint) -> Unit = {},
     onRouteClick: (Int) -> Unit = {},
@@ -254,6 +258,32 @@ fun LisboraMap(
             m.uiSettings.setCompassMargins(start, top, 0, 0)
             m.uiSettings.attributionGravity = Gravity.BOTTOM or Gravity.START
             m.uiSettings.setAttributionMargins(start, 0, 0, bottom)
+        }
+    }
+
+    LaunchedEffect(style, locationEnabled, followUser, followRequest) {
+        val m = map ?: return@LaunchedEffect
+        if (style == null || !locationEnabled) return@LaunchedEffect
+        val component = m.locationComponent
+        if (!component.isLocationComponentActivated) return@LaunchedEffect
+        if (followUser) {
+            val p = currentCameraPadding
+            with(density) {
+                m.moveCamera(
+                    CameraUpdateFactory.paddingTo(
+                        p.calculateStartPadding(LayoutDirection.Ltr).roundToPx().toDouble(),
+                        p.calculateTopPadding().roundToPx().toDouble(),
+                        p.calculateEndPadding(LayoutDirection.Ltr).roundToPx().toDouble(),
+                        p.calculateBottomPadding().roundToPx().toDouble(),
+                    ),
+                )
+            }
+            component.renderMode = RenderMode.GPS
+            component.setCameraMode(CameraMode.TRACKING_GPS, CAMERA_ANIMATION_MS.toLong(), MapDefaults.NAVIGATION_ZOOM, null, null, null)
+        } else {
+            component.cameraMode = CameraMode.NONE
+            component.renderMode = RenderMode.COMPASS
+            m.moveCamera(CameraUpdateFactory.paddingTo(0.0, 0.0, 0.0, 0.0))
         }
     }
 

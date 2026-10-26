@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +72,16 @@ import pt.lisbora.feature.map.LisboraMap
 import pt.lisbora.feature.map.PoiLayer
 import pt.lisbora.feature.map.PoiPalette
 import pt.lisbora.feature.map.RoutePalette
+import pt.lisbora.feature.navigation.KeepScreenOn
+import pt.lisbora.feature.navigation.NavigationActions
+import pt.lisbora.feature.navigation.NavigationActionsAdapter
+import pt.lisbora.feature.navigation.NavigationBottom
+import pt.lisbora.feature.navigation.NavigationMessage
+import pt.lisbora.feature.navigation.NavigationTop
+import pt.lisbora.feature.navigation.NavigationUiState
+import pt.lisbora.feature.navigation.NavigationViewModel
+import pt.lisbora.feature.navigation.RideSummaryPanel
+import pt.lisbora.feature.navigation.navigationOverlay
 import pt.lisbora.feature.planner.DirectionsHeader
 import pt.lisbora.feature.planner.PickOnMapBanner
 import pt.lisbora.feature.planner.PlaceCard
@@ -94,18 +106,28 @@ data class MapInsets(val controls: PaddingValues, val camera: PaddingValues)
 fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
     plannerViewModel: PlannerViewModel = hiltViewModel(),
+    navigationViewModel: NavigationViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val planner by plannerViewModel.uiState.collectAsStateWithLifecycle()
+    val navigation by navigationViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val darkTheme = isSystemInDarkTheme()
     // "My location" picked in the search before the permission was granted.
     var myLocationPending by remember { mutableStateOf(false) }
+    // "Iniciar" tapped before the permission was granted.
+    var navigationPending by remember { mutableStateOf(false) }
+    var confirmStop by remember { mutableStateOf(false) }
+    val startNavigation = { plannerViewModel.navigationRequest()?.let(navigationViewModel::start) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { result ->
         val granted = result.values.any { it }
-        if (myLocationPending) {
+        if (navigationPending) {
+            navigationPending = false
+            viewModel.onLocationPermissionResult(granted)
+            if (granted) startNavigation()
+        } else if (myLocationPending) {
             myLocationPending = false
             if (granted) {
                 viewModel.onLocationPermissionChecked(true)
@@ -120,26 +142,75 @@ fun HomeRoute(
     val requestPermission = {
         permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
-    val plannerActions = remember(plannerViewModel) {
-        PlannerViewModelActions(plannerViewModel) {
-            if (context.hasLocationPermission()) {
-                plannerViewModel.onMyLocationChosen()
-            } else {
-                myLocationPending = true
-                requestPermission()
-            }
+    val gpxImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { plannerViewModel.onGpxImport(it.toString()) }
+    }
+    val plannerActions = remember(plannerViewModel, navigationViewModel, gpxImportLauncher) {
+        PlannerViewModelActions(
+            viewModel = plannerViewModel,
+            onMyLocationRequested = {
+                if (context.hasLocationPermission()) {
+                    plannerViewModel.onMyLocationChosen()
+                } else {
+                    myLocationPending = true
+                    requestPermission()
+                }
+            },
+            onStartNavigationRequested = {
+                if (context.hasLocationPermission()) {
+                    startNavigation()
+                } else {
+                    navigationPending = true
+                    requestPermission()
+                }
+            },
+            // Other apps save GPX under many types: offer them all, the file is checked when read.
+            onImportGpxRequested = { gpxImportLauncher.launch(arrayOf(GPX_MIME, "application/xml", "text/xml", "application/octet-stream", "*/*")) },
+        )
+    }
+    val gpxLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(GPX_MIME)) { uri ->
+        uri?.let { navigationViewModel.onExportGpx(it.toString()) }
+    }
+    val navigationActions = remember(navigationViewModel) {
+        object : NavigationActions {
+            override fun onNavigationStop() { confirmStop = true }
+            override fun onRecenter() = navigationViewModel.onRecenter()
+            override fun onGiraGoToStation() = navigationViewModel.onGiraGoToStation()
+            override fun onGiraSwapped() = navigationViewModel.onGiraSwapped()
+            override fun onExportGpx() = gpxLauncher.launch(gpxFileName())
+            override fun onSummaryDismiss() = navigationViewModel.onSummaryDismiss()
         }
     }
 
     LaunchedEffect(Unit) { viewModel.onLocationPermissionChecked(context.hasLocationPermission()) }
-    BackHandler(enabled = planner.mode != PlannerMode.Browse || planner.search != null || planner.preferencesOpen) {
+    BackHandler(enabled = !navigation.showing && (planner.mode != PlannerMode.Browse || planner.search != null || planner.preferencesOpen)) {
         plannerViewModel.onBack()
+    }
+    BackHandler(enabled = navigation.showing) {
+        if (navigation.active) confirmStop = true else navigationViewModel.onSummaryDismiss()
+    }
+    if (confirmStop) {
+        AlertDialog(
+            onDismissRequest = { confirmStop = false },
+            title = { Text(stringResource(R.string.nav_stop_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmStop = false
+                    navigationViewModel.onStop()
+                }) { Text(stringResource(R.string.nav_stop)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmStop = false }) { Text(stringResource(R.string.nav_keep_going)) } },
+        )
     }
 
     val routePalette = if (darkTheme) RoutePalette.Dark else RoutePalette.Light
-    val overlay = remember(planner.mode, routePalette, planner.giraStations) {
+    val plannerMapOverlay = remember(planner.mode, routePalette, planner.giraStations) {
         plannerOverlay(planner.mode, routePalette, planner.giraStations)
     }
+    val navigationMapOverlay = remember(navigation.remaining, navigation.gira, navigation.destination, routePalette) {
+        navigationOverlay(navigation, routePalette)
+    }
+    val overlay = if (navigation.active) navigationMapOverlay else plannerMapOverlay
 
     HomeScreen(
         uiState = uiState,
@@ -155,6 +226,9 @@ fun HomeRoute(
         },
         planner = planner,
         plannerActions = plannerActions,
+        navigation = navigation,
+        navigationActions = navigationActions,
+        onNavigationMessageShown = navigationViewModel::onMessageShown,
     ) { insets ->
         val map = uiState.map
         if (map is MapLoadState.Ready) {
@@ -172,10 +246,12 @@ fun HomeRoute(
                 markersGeoJson = overlay.markers,
                 cameraRequest = planner.camera,
                 cameraPadding = insets.camera,
-                pickMode = planner.mode is PlannerMode.PickOnMap,
-                dimCycleNetwork = planner.mode is PlannerMode.Directions ||
+                pickMode = planner.mode is PlannerMode.PickOnMap && !navigation.active,
+                dimCycleNetwork = navigation.active || planner.mode is PlannerMode.Directions ||
                     (planner.mode as? PlannerMode.Discover)?.results is DiscoverResults.Ready,
                 poiLayers = uiState.poiLayers,
+                followUser = navigation.active,
+                followRequest = navigation.followRequest,
                 onLongPress = plannerActions::onMapLongPress,
                 onPointPicked = plannerActions::onMapPointPicked,
                 onRouteClick = plannerActions::onRouteSelect,
@@ -186,6 +262,12 @@ fun HomeRoute(
     }
 }
 
+private const val GPX_MIME = "application/gpx+xml"
+
+/** "lisbora-20261026-1530.gpx" */
+private fun gpxFileName(): String =
+    "lisbora-" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")) + ".gpx"
+
 private fun Context.hasLocationPermission(): Boolean =
     listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION).any {
         ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
@@ -194,7 +276,8 @@ private fun Context.hasLocationPermission(): Boolean =
 /**
  * Map-first home screen. The map itself is a slot ([mapContent]) so the overlays can be tested
  * without MapLibre. What sits on top depends on the planner: the search pill and legend while browsing,
- * a place card, or the trip header and the routes panel while planning.
+ * a place card, or the trip header and the routes panel while planning; while riding, the navigation
+ * (next instruction, time left) replaces all of it, and its summary at the end.
  */
 @Composable
 fun HomeScreen(
@@ -210,6 +293,9 @@ fun HomeScreen(
     onPoiLayerChange: (PoiLayer, Boolean) -> Unit = { _, _ -> },
     planner: PlannerUiState = PlannerUiState(),
     plannerActions: PlannerActions = PlannerActionsAdapter(),
+    navigation: NavigationUiState = NavigationUiState(),
+    navigationActions: NavigationActions = NavigationActionsAdapter(),
+    onNavigationMessageShown: () -> Unit = {},
     mapContent: @Composable (insets: MapInsets) -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -227,6 +313,16 @@ fun HomeScreen(
             plannerActions.onMessageShown()
         }
     }
+    val navigationMessage = navigation.message?.let {
+        stringResource(if (it == NavigationMessage.GPX_SAVED) R.string.nav_gpx_saved else R.string.nav_gpx_failed)
+    }
+    LaunchedEffect(navigation.message) {
+        if (navigationMessage != null) {
+            snackbarHostState.showSnackbar(navigationMessage)
+            onNavigationMessageShown()
+        }
+    }
+    if (navigation.active) KeepScreenOn()
     val palette = if (darkTheme) CycleNetworkPalette.Dark else CycleNetworkPalette.Light
     val routePalette = if (darkTheme) RoutePalette.Dark else RoutePalette.Light
     val poiPalette = if (darkTheme) PoiPalette.Dark else PoiPalette.Light
@@ -286,7 +382,9 @@ fun HomeScreen(
             val measureTop = Modifier.fillMaxWidth().onSizeChanged { size ->
                 topPx = size.height + with(density) { (statusBars.calculateTopPadding() + 12.dp).roundToPx() }
             }
-            when (mode) {
+            if (navigation.showing) {
+                if (navigation.active) NavigationTop(navigation, navigationActions, measureTop)
+            } else when (mode) {
                 is PlannerMode.Directions -> DirectionsHeader(mode, routePalette, plannerActions, measureTop)
                 is PlannerMode.Discover -> DiscoverHeader(
                     discover = mode,
@@ -336,14 +434,16 @@ fun HomeScreen(
             ) {
                 SnackbarHost(snackbarHostState)
                 val myLocationLabel = stringResource(R.string.map_my_location)
-                SmallFloatingActionButton(
-                    onClick = onMyLocationClick,
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier.semantics { contentDescription = myLocationLabel },
-                ) {
-                    Icon(painterResource(R.drawable.ic_my_location), contentDescription = null)
+                if (!navigation.showing) {
+                    SmallFloatingActionButton(
+                        onClick = onMyLocationClick,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.semantics { contentDescription = myLocationLabel },
+                    ) {
+                        Icon(painterResource(R.drawable.ic_my_location), contentDescription = null)
+                    }
                 }
-                if (mode == PlannerMode.Browse) {
+                if (mode == PlannerMode.Browse && !navigation.showing) {
                     val discoverLabel = stringResource(R.string.home_discover)
                     ExtendedFloatingActionButton(
                         onClick = onDiscoverClick,
@@ -355,7 +455,12 @@ fun HomeScreen(
                 }
             }
             val measureBottom = Modifier.fillMaxWidth().onSizeChanged { bottomPx = it.height }
-            when (mode) {
+            val summary = navigation.summary
+            if (navigation.active) {
+                NavigationBottom(navigation, navigationActions, measureBottom)
+            } else if (summary != null) {
+                RideSummaryPanel(summary, navigationActions, measureBottom)
+            } else when (mode) {
                 is PlannerMode.Directions -> RoutesPanel(
                     directions = mode,
                     maxGradePercent = planner.settings.maxGradePercent,
@@ -393,6 +498,7 @@ fun HomeScreen(
         }
 
         // --- full-screen layers ------------------------------------------------------------------
+        if (navigation.showing) return@BoxWithConstraints
         planner.search?.let { search ->
             SearchOverlay(state = search, saved = planner.saved, recent = planner.recent, actions = plannerActions)
         }

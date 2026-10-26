@@ -58,6 +58,7 @@ interface RoutesActions {
     fun onToggleDetails()
     fun onColorMode(mode: RouteColorMode)
     fun onChooseOrigin()
+    fun onStartNavigation()
 }
 
 /** Bottom panel while planning: the alternatives side by side, then the selected route in detail. */
@@ -118,14 +119,7 @@ fun RoutesPanel(
                         }
                     }
                     val selected = directions.selectedOption ?: return@Column
-                    TextButton(onClick = actions::onToggleDetails, modifier = Modifier.padding(start = 8.dp)) {
-                        Icon(
-                            painterResource(if (directions.detailsExpanded) R.drawable.ic_expand_more else R.drawable.ic_expand_less),
-                            contentDescription = null,
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(if (directions.detailsExpanded) R.string.route_details_hide else R.string.route_details_show))
-                    }
+                    StartAndDetails(directions.detailsExpanded, actions)
                     if (directions.detailsExpanded) {
                         RouteDetails(
                             option = selected,
@@ -138,6 +132,24 @@ fun RoutesPanel(
                     }
                 }
             }
+        }
+    }
+}
+
+/** "Iniciar" (follow the selected route) and "Ver detalhes", under the route cards. */
+@Composable
+internal fun StartAndDetails(detailsExpanded: Boolean, actions: RoutesActions) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp)) {
+        Button(onClick = actions::onStartNavigation) {
+            Icon(painterResource(R.drawable.ic_directions), contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.nav_start))
+        }
+        Spacer(Modifier.width(8.dp))
+        TextButton(onClick = actions::onToggleDetails) {
+            Icon(painterResource(if (detailsExpanded) R.drawable.ic_expand_more else R.drawable.ic_expand_less), contentDescription = null)
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(if (detailsExpanded) R.string.route_details_hide else R.string.route_details_show))
         }
     }
 }

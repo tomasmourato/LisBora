@@ -449,26 +449,10 @@ private class RouteBuilder(private val graph: RoutingGraph, private val weightin
         durationS = time,
         ascentM = ascent,
         descentM = descent,
-        maxGradePercent = steepestClimb() * 100,
+        maxGradePercent = RouteAnalysis.steepestClimbPercent(along, elevations),
         cost = cost,
         settledStates = settled,
     )
-
-    /** Steepest uphill grade over any stretch of at least [GRADE_WINDOW_M] (the whole route if shorter). */
-    private fun steepestClimb(): Double {
-        if (points.size < 2) return 0.0
-        val total = along.last()
-        if (total < GRADE_WINDOW_M) return max(0.0, (elevations.last() - elevations.first()) / GRADE_WINDOW_M)
-        var steepest = 0.0
-        var j = 0
-        for (i in points.indices) {
-            if (j < i) j = i
-            while (j < points.size - 1 && along[j] - along[i] < GRADE_WINDOW_M) j++
-            val run = along[j] - along[i]
-            if (run >= GRADE_WINDOW_M) steepest = max(steepest, (elevations[j] - elevations[i]) / run)
-        }
-        return steepest
-    }
 
     /** Shape points of [edge] between [from] and [to] metres from its base, with interpolated ends. */
     private fun slice(edge: Int, from: Double, to: Double): MutableList<Pair<GeoPoint, Double>> {
@@ -503,7 +487,6 @@ private class RouteBuilder(private val graph: RoutingGraph, private val weightin
 
     companion object {
         /** Stretch over which the route's steepest grade is measured, roughly what a rider perceives. */
-        const val GRADE_WINDOW_M = 30.0
     }
 }
 

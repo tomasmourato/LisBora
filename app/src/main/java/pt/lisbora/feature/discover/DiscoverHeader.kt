@@ -48,9 +48,12 @@ fun DiscoverHeader(
                 Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.discover_back))
             }
             Column(Modifier.weight(1f).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                val imported = (discover.results as? DiscoverResults.Ready)?.imported
                 Text(
                     text = if (discover.results == DiscoverResults.None) {
                         stringResource(R.string.discover_title)
+                    } else if (imported != null) {
+                        imported.ifBlank { stringResource(R.string.discover_gpx_untitled) }
                     } else {
                         stringResource(
                             if (setup.gira) R.string.discover_summary_gira else R.string.discover_summary,

@@ -38,16 +38,25 @@ data class DiscoverSetup(
 }
 
 enum class DiscoverFailure(@param:StringRes val textRes: Int) {
+
     START_NOT_ON_NETWORK(R.string.route_failure_start),
     END_NOT_ON_NETWORK(R.string.route_failure_end),
     NO_ROUTE(R.string.discover_failure_no_route),
     LOCATION_UNAVAILABLE(R.string.route_failure_location),
     OUTSIDE_AREA(R.string.route_failure_outside),
     SAVED_UNAVAILABLE(R.string.discover_saved_unavailable),
+    GPX_UNREADABLE(R.string.discover_failure_gpx_unreadable),
+    GPX_EMPTY(R.string.discover_failure_gpx_empty),
+    GPX_OUTSIDE(R.string.discover_failure_gpx_outside),
+    GPX_NO_ROUTE(R.string.discover_failure_gpx_no_route),
     NO_GIRA_NEAR_START(R.string.discover_failure_gira_start),
     NO_GIRA_NEAR_END(R.string.discover_failure_gira_end),
     GIRA_UNAVAILABLE(R.string.discover_failure_gira_unavailable),
     UNAVAILABLE(R.string.discover_failure_unavailable),
+    ;
+
+    /** Something wrong with an imported GPX file: retrying will not help, another file might. */
+    val isGpx: Boolean get() = name.startsWith("GPX_")
 }
 
 /**
@@ -68,8 +77,16 @@ sealed interface DiscoverResults {
     data object None : DiscoverResults
     data object Loading : DiscoverResults
 
-    /** [directOnly]: the destination leaves no time to explore, so this is the direct route. [gira]: the stations used. */
-    data class Ready(val options: List<DiscoverOption>, val directOnly: Boolean = false, val gira: GiraTrip? = null) : DiscoverResults
+    /**
+     * [directOnly]: the destination leaves no time to explore, so this is the direct route. [gira]: the
+     * stations used. [imported]: the route follows a GPX file, with this name (blank when it has none).
+     */
+    data class Ready(
+        val options: List<DiscoverOption>,
+        val directOnly: Boolean = false,
+        val gira: GiraTrip? = null,
+        val imported: String? = null,
+    ) : DiscoverResults
     data class Failed(val reason: DiscoverFailure) : DiscoverResults
 }
 

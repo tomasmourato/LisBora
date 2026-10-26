@@ -41,7 +41,7 @@ class PlannerViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = PlannerViewModel(search, routing, location, settings, saved, FakeDiscoveryRepository(), FakeSavedRoutesRepository(), FakeGiraRepository())
+    private fun viewModel() = PlannerViewModel(search, routing, location, settings, saved, FakeDiscoveryRepository(), FakeSavedRoutesRepository(), FakeGiraRepository(), FakeGpxFiles())
 
     private fun test(body: suspend TestScope.(PlannerViewModel) -> Unit) = runTest(dispatcher) { body(viewModel()) }
 

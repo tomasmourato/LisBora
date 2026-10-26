@@ -57,12 +57,14 @@ open class PlannerActionsAdapter : PlannerActions {
     override fun onToggleDetails() = Unit
     override fun onColorMode(mode: RouteColorMode) = Unit
     override fun onChooseOrigin() = Unit
+    override fun onStartNavigation() = Unit
     override fun onDiscoverOpen() = Unit
     override fun onDiscoverBack() = Unit
     override fun onDiscoverDestinationChange(toDestination: Boolean) = Unit
     override fun onDiscoverMinutes(minutes: Int) = Unit
     override fun onDiscoverPurpose(purpose: DiscoveryPurpose) = Unit
     override fun onDiscoverGira(on: Boolean) = Unit
+    override fun onImportGpx() = Unit
     override fun onDiscoverSearch() = Unit
     override fun onDiscoverAnother() = Unit
     override fun onDiscoverTweak(tweak: DiscoveryTweak) = Unit
@@ -74,11 +76,15 @@ open class PlannerActionsAdapter : PlannerActions {
 
 /**
  * Forwards to [PlannerViewModel]. "My location" goes through [onMyLocationRequested], which asks for
- * the location permission first when needed.
+ * the location permission first when needed; "Iniciar" goes to [onStartNavigationRequested] (the
+ * navigation has its own ViewModel and needs the permission too), and "Importar GPX" to
+ * [onImportGpxRequested], which opens the file picker.
  */
 class PlannerViewModelActions(
     private val viewModel: PlannerViewModel,
     private val onMyLocationRequested: () -> Unit,
+    private val onStartNavigationRequested: () -> Unit = {},
+    private val onImportGpxRequested: () -> Unit = {},
 ) : PlannerActions {
     override fun onSearchOpen() = viewModel.onSearchOpen()
     override fun onPickCancel() = viewModel.onPickCancel()
@@ -112,12 +118,14 @@ class PlannerViewModelActions(
     override fun onToggleDetails() = viewModel.onDetailsToggle()
     override fun onColorMode(mode: RouteColorMode) = viewModel.onColorModeChange(mode)
     override fun onChooseOrigin() = viewModel.onEndpointClick(SearchTarget.ORIGIN)
+    override fun onStartNavigation() = onStartNavigationRequested()
     override fun onDiscoverOpen() = viewModel.onDiscoverOpen()
     override fun onDiscoverBack() = viewModel.onDiscoverBack()
     override fun onDiscoverDestinationChange(toDestination: Boolean) = viewModel.onDiscoverDestinationChange(toDestination)
     override fun onDiscoverMinutes(minutes: Int) = viewModel.onDiscoverMinutesChange(minutes)
     override fun onDiscoverPurpose(purpose: DiscoveryPurpose) = viewModel.onDiscoverPurposeChange(purpose)
     override fun onDiscoverGira(on: Boolean) = viewModel.onDiscoverGiraChange(on)
+    override fun onImportGpx() = onImportGpxRequested()
     override fun onDiscoverSearch() = viewModel.onDiscoverSearch()
     override fun onDiscoverAnother() = viewModel.onDiscoverAnother()
     override fun onDiscoverTweak(tweak: DiscoveryTweak) = viewModel.onDiscoverTweak(tweak)
