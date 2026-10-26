@@ -20,3 +20,6 @@ captures/
 # Pipeline downloads and generated data (rebuilt by :pipeline)
 pipeline/work/
 node_modules/
+
+# Google Play: the foreground service video is uploaded to YouTube, not versioned.
+docs/play/*.mp4

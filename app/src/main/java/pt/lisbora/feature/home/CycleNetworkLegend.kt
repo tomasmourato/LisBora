@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -64,7 +66,8 @@ fun CycleNetworkLegend(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shadowElevation = 3.dp,
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Scrolls when the screen is too short for it (the caller bounds its height).
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val showLabel = stringResource(R.string.map_legend_show)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

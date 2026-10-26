@@ -390,6 +390,9 @@ fun HomeScreen(
 
     BoxWithConstraints(modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer)) {
         val screenHeight = maxHeight
+        // On short screens a tall panel (route details, Descobrir) leaves no room between it and the top
+        // bar for the location button (40 dp and its margins): hidden rather than drawn over the bar.
+        val roomForLocationButton = screenHeight - top - bottom >= 72.dp
         mapContent(insets)
 
         when (val map = uiState.map) {
@@ -408,10 +411,14 @@ fun HomeScreen(
         }
 
         // --- top ---------------------------------------------------------------------------------
+        val legendShown = uiState.legendExpanded && !navigation.showing &&
+            mode !is PlannerMode.Directions && mode !is PlannerMode.Discover && mode !is PlannerMode.PickOnMap
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
+                // Bounds the legend above the navigation bar; it scrolls on short screens.
+                .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -447,7 +454,7 @@ fun HomeScreen(
                     ) {
                         Icon(painterResource(R.drawable.ic_layers), contentDescription = null)
                     }
-                    AnimatedVisibility(visible = uiState.legendExpanded) {
+                    AnimatedVisibility(visible = uiState.legendExpanded, modifier = Modifier.weight(1f, fill = false)) {
                         val mapData = (uiState.map as? MapLoadState.Ready)?.data
                         CycleNetworkLegend(
                             meta = mapData?.cycleNetworkMeta,
@@ -472,7 +479,8 @@ fun HomeScreen(
             ) {
                 SnackbarHost(snackbarHostState)
                 val myLocationLabel = stringResource(R.string.map_my_location)
-                if (!navigation.showing) {
+                // The open legend reaches down here on short screens: the buttons wait until it closes.
+                if (!navigation.showing && !legendShown && roomForLocationButton) {
                     SmallFloatingActionButton(
                         onClick = onMyLocationClick,
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -481,7 +489,7 @@ fun HomeScreen(
                         Icon(painterResource(R.drawable.ic_my_location), contentDescription = null)
                     }
                 }
-                if (mode == PlannerMode.Browse && !navigation.showing) {
+                if (mode == PlannerMode.Browse && !navigation.showing && !legendShown) {
                     val discoverLabel = stringResource(R.string.home_discover)
                     ExtendedFloatingActionButton(
                         onClick = onDiscoverClick,
