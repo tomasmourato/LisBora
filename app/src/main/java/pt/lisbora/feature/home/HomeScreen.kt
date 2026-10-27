@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -84,6 +86,7 @@ import pt.lisbora.feature.map.LisboraMap
 import pt.lisbora.feature.map.PoiLayer
 import pt.lisbora.feature.map.PoiPalette
 import pt.lisbora.feature.map.RoutePalette
+import pt.lisbora.feature.navigation.FreeRideSheet
 import pt.lisbora.feature.navigation.KeepScreenOn
 import pt.lisbora.feature.navigation.NavigationActions
 import pt.lisbora.feature.navigation.NavigationActionsAdapter
@@ -132,10 +135,15 @@ fun HomeRoute(
     val darkTheme = isSystemInDarkTheme()
     // "My location" picked in the search before the permission was granted.
     var myLocationPending by remember { mutableStateOf(false) }
-    // "Iniciar" tapped before the permission was granted.
+    // "Iniciar" (or "Começar" in "Pedalar") tapped before the permission was granted.
     var navigationPending by remember { mutableStateOf(false) }
     var confirmStop by remember { mutableStateOf(false) }
-    val startNavigation = { plannerViewModel.navigationRequest()?.let(navigationViewModel::start) }
+    val startNavigation = {
+        plannerViewModel.navigationRequest()?.let {
+            navigationViewModel.start(it)
+            plannerViewModel.onNavigationStarted()
+        }
+    }
     // Asked once, at the first ride: the notification shows the next turn with the screen off.
     var notificationsAsked by rememberSaveable { mutableStateOf(false) }
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { startNavigation() }
@@ -223,7 +231,7 @@ fun HomeRoute(
     if (confirmStop) {
         AlertDialog(
             onDismissRequest = { confirmStop = false },
-            title = { Text(stringResource(R.string.nav_stop_confirm)) },
+            title = { Text(stringResource(if (navigation.free) R.string.free_ride_stop_confirm else R.string.nav_stop_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmStop = false
@@ -326,10 +334,12 @@ private fun Context.hasLocationPermission(): Boolean =
 /**
  * Map-first home screen. The map itself is a slot ([mapContent]) so the overlays can be tested
  * without MapLibre. What sits on top depends on the planner: the search pill and legend while browsing,
- * a place card, or the trip header and the routes panel while planning; while riding, the navigation
- * (next instruction, time left) replaces all of it, and its summary at the end — on top and at the bottom
- * with the phone upright, in a column on the left with the phone sideways.
+ * a place card, or the trip header and the routes panel while planning ("Pedalar" opens a sheet to ride
+ * without a route); while riding, the navigation (next instruction, time left) replaces all of it, and its
+ * summary at the end — on top and at the bottom with the phone upright, in a column on the left with the
+ * phone sideways.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
@@ -575,14 +585,29 @@ fun HomeScreen(
                     }
                 }
                 if (mode == PlannerMode.Browse && !navigation.showing && !legendShown) {
-                    val discoverLabel = stringResource(R.string.home_discover)
-                    ExtendedFloatingActionButton(
-                        onClick = onDiscoverClick,
-                        // M3 clears the label's semantics, so name the button explicitly for TalkBack.
-                        modifier = Modifier.semantics { contentDescription = discoverLabel },
-                        icon = { Icon(painterResource(R.drawable.ic_explore), contentDescription = null) },
-                        text = { Text(discoverLabel) },
-                    )
+                    // Side by side; "Descobrir" goes below on a narrow screen or with large text.
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // A ride without a route, only recorded: the summary at the end.
+                        val freeRideLabel = stringResource(R.string.home_free_ride)
+                        ExtendedFloatingActionButton(
+                            onClick = plannerActions::onFreeRideOpen,
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier.semantics { contentDescription = freeRideLabel },
+                            icon = { Icon(painterResource(R.drawable.ic_bike), contentDescription = null) },
+                            text = { Text(freeRideLabel) },
+                        )
+                        val discoverLabel = stringResource(R.string.home_discover)
+                        ExtendedFloatingActionButton(
+                            onClick = onDiscoverClick,
+                            // M3 clears the label's semantics, so name the button explicitly for TalkBack.
+                            modifier = Modifier.semantics { contentDescription = discoverLabel },
+                            icon = { Icon(painterResource(R.drawable.ic_explore), contentDescription = null) },
+                            text = { Text(discoverLabel) },
+                        )
+                    }
                 }
             }
             val measureBottom = Modifier.fillMaxWidth().onSizeChanged { bottomPx = it.height }
@@ -633,6 +658,7 @@ fun HomeScreen(
         planner.search?.let { search ->
             SearchOverlay(state = search, saved = planner.saved, recent = planner.recent, actions = plannerActions)
         }
+        planner.freeRide?.let { FreeRideSheet(it, planner.giraStations, plannerActions) }
         if (planner.preferencesOpen) {
             PreferencesSheet(
                 settings = planner.settings,

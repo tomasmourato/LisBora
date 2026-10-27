@@ -36,6 +36,7 @@ import pt.lisbora.feature.discover.GiraTrip
 import pt.lisbora.feature.discover.matching
 import pt.lisbora.feature.discover.toGiraPreferences
 import pt.lisbora.feature.map.MapDefaults
+import pt.lisbora.feature.navigation.FreeRideSetup
 import pt.lisbora.feature.navigation.NavigationRequest
 import pt.lisbora.routing.Route
 import pt.lisbora.routing.RouteResult
@@ -77,6 +78,9 @@ class PlannerViewModel @Inject constructor(
     private var discoverJob: Job? = null
     private var cameraIds = 0L
     private var mapCenter: GeoPoint = MapDefaults.LisbonCenter
+
+    /** The bike last chosen in "Pedalar", offered again. */
+    private var freeRideGira = false
 
     init {
         viewModelScope.launch { savedPlaces.saved.collect { list -> _uiState.update { it.copy(saved = list) } } }
@@ -454,9 +458,16 @@ class PlannerViewModel @Inject constructor(
 
     // --- navigation -------------------------------------------------------------------------
 
-    /** What "Iniciar" follows: the selected A→B or Descobrir route, with the preferences to recompute it. */
+    /**
+     * What "Iniciar" follows: the selected A→B or Descobrir route, with the preferences to recompute it;
+     * or, from the "Pedalar" sheet, a ride without a route.
+     */
     fun navigationRequest(): NavigationRequest? {
         val s = _uiState.value
+        s.freeRide?.let { setup ->
+            val preferences = if (setup.gira) s.settings.toGiraPreferences() else s.settings.toRoutingPreferences()
+            return NavigationRequest.free(preferences, title = TITLE, gira = setup.gira)
+        }
         return when (val mode = s.mode) {
             is PlannerMode.Directions -> mode.selectedOption?.route?.let { route ->
                 val name = (mode.destination as? Endpoint.AtPlace)?.place?.name?.ifBlank { null }
@@ -482,6 +493,26 @@ class PlannerViewModel @Inject constructor(
             }
             else -> null
         }
+    }
+
+    /** The ride has started: the "Pedalar" sheet is not needed any more. */
+    fun onNavigationStarted() = onFreeRideClose()
+
+    // --- free ride --------------------------------------------------------------------------
+
+    /** "Pedalar": the sheet to start a ride without a route, on the bike chosen last time. */
+    fun onFreeRideOpen() {
+        _uiState.update { it.copy(freeRide = FreeRideSetup(gira = freeRideGira)) }
+        if (freeRideGira) viewModelScope.launch { giraStations() }
+    }
+
+    fun onFreeRideClose() = _uiState.update { it.copy(freeRide = null) }
+
+    /** A GIRA bike instead of the rider's own: the sheet says whether the stations' counts are live. */
+    fun onFreeRideGiraChange(on: Boolean) {
+        freeRideGira = on
+        _uiState.update { s -> s.freeRide?.let { s.copy(freeRide = it.copy(gira = on)) } ?: s }
+        if (on) viewModelScope.launch { giraStations() }
     }
 
     // --- discover ---------------------------------------------------------------------------
@@ -767,6 +798,7 @@ class PlannerViewModel @Inject constructor(
         when {
             s.search != null -> onSearchClose()
             s.preferencesOpen -> onPreferencesClose()
+            s.freeRide != null -> onFreeRideClose()
             s.mode is PlannerMode.PickOnMap -> onPickCancel()
             s.mode is PlannerMode.Directions -> onDirectionsClose()
             s.mode is PlannerMode.Discover -> onDiscoverBack()

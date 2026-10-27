@@ -175,7 +175,7 @@ private fun SetupContent(
                 }
             }
         }
-        GiraRow(setup.gira, giraStations, onChange = actions::onDiscoverGira)
+        GiraRow(setup.gira, giraStations, stringResource(R.string.discover_gira_hint), onChange = actions::onDiscoverGira)
         ChoiceSection(stringResource(R.string.discover_time)) {
             DiscoverSetup.MINUTE_OPTIONS.forEach { minutes ->
                 FilterChip(selected = setup.minutes == minutes, onClick = { actions.onDiscoverMinutes(minutes) }, label = { Text(minutesLabel(minutes)) })
@@ -210,9 +210,9 @@ private fun SetupContent(
     }
 }
 
-/** "Bicicleta GIRA": from station to station, never leaving Lisbon; once on, whether the counts are live. */
+/** "Bicicleta GIRA" with what it changes ([hint]); once on, whether the counts are live. Also in "Pedalar". */
 @Composable
-private fun GiraRow(on: Boolean, stations: List<GiraStation>, onChange: (Boolean) -> Unit) {
+internal fun GiraRow(on: Boolean, stations: List<GiraStation>, hint: String, onChange: (Boolean) -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(value = on, role = Role.Switch, onValueChange = onChange),
@@ -221,7 +221,7 @@ private fun GiraRow(on: Boolean, stations: List<GiraStation>, onChange: (Boolean
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(stringResource(R.string.discover_gira), style = MaterialTheme.typography.bodyLarge)
-            Text(stringResource(R.string.discover_gira_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (on && stations.isNotEmpty()) {
                 val withBikes = stations.count { it.hasBike }
                 Text(

@@ -11,20 +11,31 @@ import pt.lisbora.routing.navigation.RouteProgress
 import pt.lisbora.routing.weighting.RoutingPreferences
 
 /**
- * A route to follow. [rejoin]: after leaving it, go back to it a little ahead (a Descobrir route is worth
- * keeping); otherwise compute a new route to [destination] (A→B). [title] names the trip in the GPX file.
+ * A route to follow, or none on a free ride ("Pedalar"), which is only recorded for its summary.
+ * [rejoin]: after leaving the route, go back to it a little ahead (a Descobrir route is worth keeping);
+ * otherwise compute a new route to [destination] (A→B). [title] names the trip in the GPX file.
  */
 data class NavigationRequest(
-    val route: Route,
-    val destination: GeoPoint,
+    val route: Route?,
+    val destination: GeoPoint?,
     val rejoin: Boolean,
     val preferences: RoutingPreferences,
     val title: String,
-    /** A GIRA ride: where the bike is taken and returned. */
+    /** A GIRA ride from a station to a station: where the bike is taken and returned. */
     val gira: GiraTrip? = null,
+    /** On a GIRA bike: a planned [gira] trip, or a free ride whose 45 minutes start straight away. */
+    val onGira: Boolean = gira != null,
     /** Rides on the rider's own bike teach the app their pace (GIRA bikes are not theirs). */
-    val calibrates: Boolean = gira == null,
-)
+    val calibrates: Boolean = !onGira,
+) {
+    val free: Boolean get() = route == null
+
+    companion object {
+        /** A ride without a route or instructions; on a GIRA bike ([gira]), taken just now. */
+        fun free(preferences: RoutingPreferences, title: String, gira: Boolean) =
+            NavigationRequest(route = null, destination = null, rejoin = false, preferences = preferences, title = title, onGira = gira)
+    }
+}
 
 /** Time left in a GIRA trip's 45-minute period, when it is worth saying. */
 enum class GiraWarning { TEN_MINUTES, FIVE_MINUTES, OVER }
@@ -59,7 +70,8 @@ data class NearbyStation(val station: GiraStation, val distanceM: Double)
  * starts riding); [swapStation] is set while going to a station to swap bikes, [atSwapStation] once there.
  */
 data class GiraNavigation(
-    val trip: GiraTrip,
+    /** The stations planned; null on a free ride, which starts with the bike already taken. */
+    val trip: GiraTrip?,
     val startedAtMs: Long? = null,
     val elapsedS: Double = 0.0,
     val warning: GiraWarning? = null,
@@ -81,18 +93,25 @@ data class RideSummary(
     val distanceM: Double,
     val movingS: Double,
     val elapsedS: Double,
-    val climbM: Double,
+    /** Null while unknown: a free ride's comes from its track followed on the network, when it can be. */
+    val climbM: Double?,
     val arrived: Boolean,
     /** The new learnt pace when this ride changed it, else null. */
     val newPersonalFactor: Double?,
     val track: List<TrackPoint>,
-    val plannedRoute: Route,
+    /** Null on a free ride. */
+    val plannedRoute: Route?,
 ) {
     val averageKmh: Double get() = if (movingS > 0) distanceM / movingS * 3.6 else 0.0
 }
 
 data class NavigationUiState(
     val active: Boolean = false,
+    /** A ride without a route ("Pedalar"): there is one only on the way to swap GIRA bikes. */
+    val free: Boolean = false,
+    /** Ridden so far: distance and time moving. */
+    val riddenM: Double = 0.0,
+    val movingS: Double = 0.0,
     /** The route being followed now (after detours), and its instructions and hazards. */
     val route: Route? = null,
     val instructions: List<Instruction> = emptyList(),

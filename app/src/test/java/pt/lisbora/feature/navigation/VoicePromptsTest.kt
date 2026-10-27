@@ -85,7 +85,7 @@ class VoicePromptsTest {
         assertEquals(listOf(VoicePrompt.OffRoute), voice.next(off))
         assertEquals(emptyList<VoicePrompt>(), voice.next(off))
         val failed = riding(700.0, instructions).copy(rerouteFailed = true)
-        assertEquals(listOf(VoicePrompt.RerouteFailed), voice.next(failed))
+        assertEquals(listOf(VoicePrompt.RerouteFailed()), voice.next(failed))
         assertEquals(emptyList<VoicePrompt>(), voice.next(failed))
     }
 
@@ -130,5 +130,19 @@ class VoicePromptsTest {
         assertEquals(listOf(VoicePrompt.Turn(left, 600.0)), voice.next(riding(0.0)))
         // Stopped early: nothing to say.
         assertEquals(emptyList<VoicePrompt>(), voice.next(NavigationUiState(summary = summary.copy(arrived = false))))
+    }
+
+    @Test
+    fun `riding free, only the GIRA warnings are said, and nothing at the end`() {
+        val voice = VoicePrompts()
+        val swap = NearbyStation(GiraStation(205, "Bicicletas Gira Estação 205", point, bikes = 4, freeDocks = 6), 300.0)
+        val free = NavigationUiState(active = true, free = true, waitingForGps = false, riddenM = 2000.0, movingS = 600.0)
+        val gira = GiraNavigation(trip = null, startedAtMs = 0, elapsedS = 30 * 60.0)
+        assertEquals(emptyList<VoicePrompt>(), voice.next(free.copy(gira = gira)))
+        val warned = gira.copy(elapsedS = 35 * 60.0, warning = GiraWarning.TEN_MINUTES, suggestion = swap)
+        assertEquals(listOf(VoicePrompt.GiraTime(GiraWarning.TEN_MINUTES, 10, swap)), voice.next(free.copy(gira = warned)))
+        assertEquals(emptyList<VoicePrompt>(), voice.next(free.copy(gira = warned.copy(elapsedS = 36 * 60.0))))
+        val summary = RideSummary("LisBora", 2000.0, 600.0, 700.0, null, arrived = false, newPersonalFactor = null, track = emptyList(), plannedRoute = null)
+        assertEquals(emptyList<VoicePrompt>(), voice.next(NavigationUiState(summary = summary)))
     }
 }

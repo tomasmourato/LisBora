@@ -14,6 +14,16 @@ import pt.lisbora.routing.navigation.Instruction
 import pt.lisbora.routing.navigation.Maneuver
 import pt.lisbora.routing.navigation.WalkChange
 
+/** Time ridden so far, in whole minutes as a clock counts them: "0 min" at the start, "1 h 05 min". */
+@Composable
+fun formatRidden(seconds: Double): String = formatRidden(LocalResources.current, seconds)
+
+fun formatRidden(res: Resources, seconds: Double): String {
+    val minutes = (seconds / 60).toInt().coerceAtLeast(0)
+    return if (minutes < 60) res.getString(R.string.duration_minutes, minutes)
+    else res.getString(R.string.duration_hours, minutes / 60, minutes % 60)
+}
+
 /**
  * The instruction in words: "Vire à esquerda", "Vire à direita e entre na ciclovia", "Desmonte e siga a pé".
  * The street goes on a line of its own (no article to guess: "a Rua", "o Largo").

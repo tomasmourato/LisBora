@@ -1,6 +1,6 @@
 # Política de privacidade da LisBora
 
-Última atualização: 26 de outubro de 2026.
+Última atualização: 27 de outubro de 2026.
 
 A LisBora é uma app Android de rotas de bicicleta em Lisboa. As rotas são calculadas no telemóvel. A app não tem contas, publicidade, estatísticas de utilização nem relatórios de erros, e não vende nem partilha dados de ninguém.
 
@@ -10,9 +10,10 @@ A app usa a localização do telemóvel (precisa ou aproximada, conforme a permi
 
 - mostrar onde estás no mapa;
 - calcular rotas e passeios a partir de onde estás;
-- seguir uma rota: indicações, recálculo quando sais dela e resumo no fim.
+- seguir uma rota: indicações, recálculo quando sais dela e resumo no fim;
+- registar uma volta sem rota ("Pedalar"), para o resumo no fim: distância, tempo, velocidade média e subida.
 
-A localização é tratada só no telemóvel. Nunca é enviada para nenhum servidor, nem guardada depois de a viagem acabar. Durante a navegação, a app continua a ler o GPS com o ecrã desligado através de um serviço em primeiro plano, sempre com uma notificação visível. A app não pede acesso à localização em segundo plano.
+A localização é tratada só no telemóvel. Nunca é enviada para nenhum servidor, nem guardada depois de a viagem acabar. Durante a navegação e numa volta sem rota, a app continua a ler o GPS com o ecrã desligado através de um serviço em primeiro plano, sempre com uma notificação visível. A app não pede acesso à localização em segundo plano.
 
 ## O que fica guardado no telemóvel
 
@@ -31,7 +32,7 @@ Se tiveres a cópia de segurança do Android ligada, as preferências, os favori
 A app funciona sem Internet. Liga-se apenas a dois serviços, e não envia dados pessoais a nenhum deles:
 
 1. **Atualização dos dados (GitHub).** Uma vez por dia, em Wi-Fi, e quando carregas em "Procurar dados novos", a app descarrega o pacote de dados publicado no repositório da LisBora no GitHub (`github.com` e os servidores de ficheiros do GitHub). O pedido leva o endereço IP do telemóvel, como qualquer ligação à Internet, e a versão da app ("LisBora/0.1.0"). O GitHub trata esses dados segundo a sua [declaração de privacidade](https://docs.github.com/pt/site-policy/privacy-policies/github-general-privacy-statement).
-2. **Bicicletas e docas livres da GIRA.** Só no modo GIRA (Descobrir com bicicleta GIRA e a navegação que daí resulta), a app pede à plataforma da GIRA a lista das estações com bicicletas e docas livres. É a mesma base de dados (Firebase, da Google) que a app oficial da GIRA usa. O pedido é igual para toda a gente: não leva a tua localização nem nenhum identificador teu. Leva apenas o endereço IP do telemóvel.
+2. **Bicicletas e docas livres da GIRA.** Só no modo GIRA (Descobrir ou Pedalar com bicicleta GIRA, e a volta que daí resulta), a app pede à plataforma da GIRA a lista das estações com bicicletas e docas livres. É a mesma base de dados (Firebase, da Google) que a app oficial da GIRA usa. O pedido é igual para toda a gente: não leva a tua localização nem nenhum identificador teu. Leva apenas o endereço IP do telemóvel.
 
 O mapa, as rotas, a pesquisa e a navegação não usam a Internet.
 
@@ -39,8 +40,8 @@ O mapa, as rotas, a pesquisa e a navegação não usam a Internet.
 
 - **Localização** (precisa e aproximada): para o que está descrito acima.
 - **Internet**: para os dois serviços acima.
-- **Notificações**: para mostrar a próxima indicação enquanto segues uma rota.
-- **Serviço em primeiro plano (localização)**: para continuar a navegação com o ecrã desligado.
+- **Notificações**: para mostrar a próxima indicação enquanto segues uma rota, ou o que já pedalaste numa volta sem rota.
+- **Serviço em primeiro plano (localização)**: para continuar a navegação, ou a volta sem rota, com o ecrã desligado.
 
 ## Contacto e alterações
 

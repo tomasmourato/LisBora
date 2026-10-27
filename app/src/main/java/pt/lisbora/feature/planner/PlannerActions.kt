@@ -5,13 +5,14 @@ import pt.lisbora.data.saved.SavedPlace
 import pt.lisbora.data.saved.SavedRoute
 import pt.lisbora.data.settings.RidingSettings
 import pt.lisbora.feature.discover.DiscoverActions
+import pt.lisbora.feature.navigation.FreeRideActions
 import pt.lisbora.routing.discover.DiscoveryPurpose
 import pt.lisbora.routing.discover.DiscoveryTweak
 import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.search.Place
 
 /** Everything the planner panels and the map can ask of the planner. */
-interface PlannerActions : SearchActions, PlaceActions, DirectionsActions, RoutesActions, DiscoverActions {
+interface PlannerActions : SearchActions, PlaceActions, DirectionsActions, RoutesActions, DiscoverActions, FreeRideActions {
     fun onSearchOpen()
     fun onPickCancel()
     fun onMapLongPress(point: GeoPoint)
@@ -72,13 +73,17 @@ open class PlannerActionsAdapter : PlannerActions {
     override fun onDiscoverSave() = Unit
     override fun onSavedRouteOpen(route: SavedRoute) = Unit
     override fun onSavedRouteRemove(route: SavedRoute) = Unit
+    override fun onFreeRideOpen() = Unit
+    override fun onFreeRideClose() = Unit
+    override fun onFreeRideGira(on: Boolean) = Unit
+    override fun onFreeRideStart() = Unit
 }
 
 /**
  * Forwards to [PlannerViewModel]. "My location" goes through [onMyLocationRequested], which asks for
- * the location permission first when needed; "Iniciar" goes to [onStartNavigationRequested] (the
- * navigation has its own ViewModel and needs the permission too), and "Importar GPX" to
- * [onImportGpxRequested], which opens the file picker.
+ * the location permission first when needed; "Iniciar" (and "Começar" in "Pedalar") goes to
+ * [onStartNavigationRequested] (the navigation has its own ViewModel and needs the permission too), and
+ * "Importar GPX" to [onImportGpxRequested], which opens the file picker.
  */
 class PlannerViewModelActions(
     private val viewModel: PlannerViewModel,
@@ -133,4 +138,8 @@ class PlannerViewModelActions(
     override fun onDiscoverSave() = viewModel.onDiscoverSave()
     override fun onSavedRouteOpen(route: SavedRoute) = viewModel.onSavedRouteOpen(route)
     override fun onSavedRouteRemove(route: SavedRoute) = viewModel.onSavedRouteRemove(route)
+    override fun onFreeRideOpen() = viewModel.onFreeRideOpen()
+    override fun onFreeRideClose() = viewModel.onFreeRideClose()
+    override fun onFreeRideGira(on: Boolean) = viewModel.onFreeRideGiraChange(on)
+    override fun onFreeRideStart() = onStartNavigationRequested()
 }

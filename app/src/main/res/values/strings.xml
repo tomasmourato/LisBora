@@ -4,6 +4,7 @@
 
     <string name="home_search_hint">Para onde vais?</string>
     <string name="home_discover">Descobrir</string>
+    <string name="home_free_ride">Pedalar</string>
 
     <string name="map_legend_toggle">Legenda da rede ciclável</string>
     <string name="map_legend_title">Rede ciclável</string>
@@ -297,6 +298,7 @@
     <string name="nav_waiting_gps">À espera do GPS…</string>
     <string name="nav_rerouting">Fora da rota: a calcular outra…</string>
     <string name="nav_reroute_failed">Não foi possível calcular outra rota daqui. Volta à rota marcada.</string>
+    <string name="nav_free_route_failed">Não foi possível calcular o caminho daqui até à estação.</string>
     <string name="nav_remaining">%1$s · chegada às %2$s</string>
     <string name="nav_then">Depois, %1$s</string>
     <string name="nav_depart">Siga em frente</string>
@@ -360,8 +362,18 @@
     <string name="nav_voice_off">Desligar as indicações por voz</string>
     <string name="nav_voice_unavailable">Este telemóvel não tem voz em português: as indicações ficam só no ecrã.</string>
     <string name="nav_channel">Navegação</string>
-    <string name="nav_channel_description">A próxima indicação enquanto segues uma rota, também com o ecrã desligado.</string>
+    <string name="nav_channel_description">A próxima indicação enquanto segues uma rota (ou o que já pedalaste, numa volta sem rota), também com o ecrã desligado.</string>
     <string name="nav_notification_riding">A seguir a rota</string>
+
+    <!-- Pedalar: uma volta sem rota nem indicações -->
+    <string name="free_ride_title">Pedalar sem rota</string>
+    <string name="free_ride_body">Sem destino nem indicações: a LisBora regista a volta e, no fim, mostra a distância, o tempo a pedalar, a velocidade média e a subida.</string>
+    <string name="free_ride_gira_hint">Conta os 45 min da viagem a partir de agora e, antes de acabarem, diz onde trocar de bicicleta.</string>
+    <string name="free_ride_start">Começar</string>
+    <string name="free_ride_stop_confirm">Terminar a volta?</string>
+    <string name="nav_free_stats">%1$s a pedalar · %2$d km/h de média</string>
+    <string name="nav_free_moving">%1$s a pedalar</string>
+    <string name="nav_free_notification">A pedalar</string>
     <!-- Spoken while riding: words, not symbols ("150 metros", not "150 m"). -->
     <string name="voice_in">Daqui a %1$s, %2$s</string>
     <string name="voice_roundabout">Entre na rotunda</string>

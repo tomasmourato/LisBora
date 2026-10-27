@@ -253,4 +253,106 @@ class NavigationSessionTest {
         assertTrue(markers.none { it.getValue("kind").jsonPrimitive.content == "destination" })
         assertNotNull(Json.parseToJsonElement(navigationOverlay(state, RoutePalette.Light).routes))
     }
+
+    // --- free rides ("Pedalar") -------------------------------------------------------------------
+
+    private fun freeRide(gira: Boolean = false) = NavigationRequest.free(RoutingPreferences(), "LisBora", gira)
+
+    @Test
+    fun `a free ride is only recorded, and followed on the network at the end for its climb and the rider's pace`() = test { vm ->
+        // The streets it keeps to: 3 km with 45 m of climb, 15 minutes for the model.
+        routing.alongResult = RouteResult.Success(
+            fakeRoute((0..6).map { at(it * 500.0) }, durationS = 900.0, elevations = listOf(0.0, 10.0, 20.0, 15.0, 25.0, 35.0, 40.0)),
+        )
+        vm.start(freeRide())
+        assertTrue(vm.uiState.value.active)
+        assertTrue(vm.uiState.value.free)
+        assertNull(vm.uiState.value.gira)
+        // 3 km in 10 minutes.
+        var m = 0.0
+        while (m <= 3000.0) {
+            fix(alongStraight(m))
+            m += 25.0
+        }
+        val riding = vm.uiState.value
+        assertFalse(riding.waitingForGps)
+        assertEquals(3000.0, riding.riddenM, 30.0)
+        assertEquals(600.0, riding.movingS, 10.0)
+        // Nothing to follow, to arrive at or to leave.
+        assertTrue(riding.active)
+        assertNull(riding.route)
+        assertNull(riding.next)
+        assertTrue(routing.requests.isEmpty())
+
+        vm.onStop()
+        val summary = vm.uiState.value.summary!!
+        assertFalse(summary.arrived)
+        assertNull(summary.plannedRoute)
+        assertEquals(3000.0, summary.distanceM, 30.0)
+        assertEquals(121, routing.tracks.single().size)
+        assertEquals(45.0, summary.climbM!!, 0.01)
+        assertEquals(1.15, summary.newPersonalFactor!!, 0.01)
+        assertEquals(1.15, settings.state.value.personalFactor, 0.01)
+
+        vm.onExportGpx("content://gpx/2")
+        val written = gpx.written.getValue("content://gpx/2")
+        assertTrue(written.contains("<trkpt"))
+        assertFalse(written.contains("<rte>"))
+    }
+
+    @Test
+    fun `a free ride the network does not follow says neither its climb nor the pace`() = test { vm ->
+        // The streets found are twice as long as the ride (a path missing from the map).
+        routing.alongResult = RouteResult.Success(fakeRoute(listOf(at(0.0), at(300.0, 500.0), at(600.0)), durationS = 400.0))
+        vm.start(freeRide())
+        var m = 0.0
+        while (m <= 600.0) {
+            fix(alongStraight(m))
+            m += 25.0
+        }
+        vm.onStop()
+        val summary = vm.uiState.value.summary!!
+        assertEquals(600.0, summary.distanceM, 10.0)
+        assertNull(summary.climbM)
+        assertNull(summary.newPersonalFactor)
+        assertEquals(1.0, settings.state.value.personalFactor, 0.0)
+    }
+
+    @Test
+    fun `a free GIRA ride counts the 45 minutes from the start, can be taken to a station to swap, then rides on free`() = test { vm ->
+        gira.stations = listOf(nearby, full)
+        vm.start(freeRide(gira = true))
+        var g = vm.uiState.value.gira!!
+        assertTrue(g.started)
+        assertNull(g.trip)
+
+        // 35 minutes on, 1 km away: ten minutes left (with no route, the ride may not end in time).
+        fix(alongStraight(0.0))
+        fix(alongStraight(1000.0), afterS = 35 * 60.0)
+        g = vm.uiState.value.gira!!
+        assertEquals(GiraWarning.TEN_MINUTES, g.warning)
+        assertEquals(nearby, g.suggestion!!.station)
+        val markers = Json.parseToJsonElement(navigationOverlay(vm.uiState.value, RoutePalette.Light).markers).jsonObject
+            .getValue("features").jsonArray.map { it.jsonObject.getValue("properties").jsonObject.getValue("label").jsonPrimitive.content }
+        assertEquals(listOf("GIRA 205"), markers)
+
+        // "Ir até lá": guided to the station only.
+        routing.result = RouteResult.Success(fakeRoute(listOf(alongStraight(1000.0), nearby.point), durationS = 60.0))
+        vm.onGiraGoToStation()
+        assertEquals(nearby.point, routing.requests.single().second)
+        assertNotNull(vm.uiState.value.route)
+        fix(nearby.point, afterS = 60.0)
+        assertTrue(vm.uiState.value.gira!!.atSwapStation)
+        assertTrue(vm.uiState.value.active)
+
+        // "Já troquei": a new 45 minutes and no route again.
+        vm.onGiraSwapped()
+        fix(at(1400.0, 150.0), afterS = 30.0)
+        val state = vm.uiState.value
+        assertNull(state.route)
+        assertNull(state.remaining)
+        assertEquals(1, state.gira!!.swaps)
+        assertNull(state.gira.warning)
+        assertEquals(1, routing.requests.size)
+    }
 }

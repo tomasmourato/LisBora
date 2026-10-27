@@ -165,7 +165,7 @@ Ficheiros principais a criar (representativos):
 
 - **Ecrã principal**:
   - mapa claro centrado em Lisboa, com a rede ciclável colorida por classe e uma legenda
-  - barra "Para onde vais?" e um FAB grande "Descobrir"
+  - barra "Para onde vais?", um FAB grande "Descobrir" e, ao lado, "Pedalar" (uma volta sem rota)
   - camadas opcionais: POIs, GIRA, bebedouros, estacionamento
   - tocar num troço da CML mostra a designação e a tipologia
 - **Rota**:
@@ -274,6 +274,13 @@ Cada fase termina com build, testes, instalação e execução no emulador e uma
        - A chave de assinatura do release é lida de `~/.gradle/gradle.properties`, nunca do repositório. Sem ela, o release é assinado com a chave de debug.
        - O guia [PLAY_STORE.md](PLAY_STORE.md) diz o que falta fazer na Play Console.
        - A atualização de dados a partir do GitHub foi verificada no release: o worker descarregou o pacote que o workflow publicou e, depois de "Reiniciar agora", a app passou a usar o grafo novo.
+
+8. **Pedalar (volta sem rota)** — pedido do utilizador.
+   - **Feito (27/10/2026, versão 0.1.3).**
+     - O botão "Pedalar", ao lado do "Descobrir", abre uma folha com a opção "Bicicleta GIRA" e "Começar". A volta usa a mesma `NavigationSession`, o mesmo serviço em primeiro plano e o mesmo resumo da navegação, mas sem rota (`NavigationRequest.free`): não há indicações, recálculo nem chegada. Em baixo aparecem a distância, o tempo a pedalar e a velocidade média; a notificação diz "A pedalar" e o mesmo.
+     - Subida e ritmo: a altitude do GPS é demasiado imprecisa para as colinas de Lisboa. No fim, o percurso (só as posições que contaram para a distância, sem saltos do GPS) é seguido no grafo com o `TrackMatcher`, como um GPX importado. Se as ruas encontradas tiverem um comprimento a menos de 15% da distância pedalada, a subida vem das altitudes do terreno do grafo e, na bicicleta do utilizador, o ritmo pessoal aprende com o tempo que o modelo previa para essas ruas. Se não, o resumo não mostra a subida.
+     - GIRA: os 45 min contam a partir de "Começar" (a bicicleta já está levantada). Aos 10 e 5 min do fim, e depois de passarem, avisa (no ecrã e por voz) e diz a estação mais próxima com doca livre. "Ir até lá" guia só até à estação; "Já troquei" recomeça os 45 min e volta à volta sem rota.
+     - Verificação no emulador: uma volta simulada de 1,5 km do Cais do Sodré ao Bairro Alto (`pipeline route` e `simulate-ride.py`), com GIRA, mostrou a distância, o tempo e a velocidade a contar, no ecrã e na notificação, e não acabou ao chegar ao fim do percurso. Depois de "Terminar", o resumo deu 1,5 km, 17 km/h e 77 m de subida, a mesma que o router dá para essas ruas; o percurso, de 298 pontos, foi seguido no grafo em 202 ms. A notificação desapareceu no fim.
 
 Para o futuro, opcional:
 - Supabase (sincronização e partilha)

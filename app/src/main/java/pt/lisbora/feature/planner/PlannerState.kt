@@ -9,6 +9,7 @@ import pt.lisbora.data.settings.RidingSettings
 import pt.lisbora.feature.discover.DiscoverOption
 import pt.lisbora.feature.discover.DiscoverResults
 import pt.lisbora.feature.discover.DiscoverSetup
+import pt.lisbora.feature.navigation.FreeRideSetup
 import pt.lisbora.routing.discover.DiscoveryTweak
 import pt.lisbora.routing.geo.GeoBounds
 import pt.lisbora.routing.geo.GeoPoint
@@ -130,6 +131,8 @@ data class PlannerUiState(
     val giraStations: List<GiraStation> = emptyList(),
     val settings: RidingSettings = RidingSettings(),
     val preferencesOpen: Boolean = false,
+    /** The "Pedalar" sheet, while open. */
+    val freeRide: FreeRideSetup? = null,
     val camera: CameraRequest? = null,
     val message: PlannerMessage? = null,
     /** Last position known to the planner, for distances in the search results. */

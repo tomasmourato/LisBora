@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -169,5 +170,57 @@ class NavigationScreensTest {
         composeRule.onNodeWithText("As próximas estimativas contam com o teu ritmo: 8% mais rápido do que o previsto.").assertIsDisplayed()
         composeRule.onNodeWithText("Exportar GPX").performClick()
         assertEquals(listOf("gpx"), actions.calls)
+    }
+
+    @Test
+    fun aFreeRideShowsWhatHasBeenRiddenAndTheGiraTime() {
+        val actions = Recorder()
+        val state = NavigationUiState(
+            active = true,
+            free = true,
+            waitingForGps = false,
+            riddenM = 3200.0,
+            movingS = 660.0,
+            gira = GiraNavigation(trip = null, startedAtMs = 0, elapsedS = 12 * 60.0),
+        )
+        composeRule.setContent { LisboraTheme { Column { NavigationTop(state, actions); NavigationBottom(state, actions) } } }
+        composeRule.onNodeWithText("3,2 km").assertIsDisplayed()
+        composeRule.onNodeWithText("11 min a pedalar · 17 km/h de média").assertIsDisplayed()
+        composeRule.onNodeWithText("GIRA: 12 min desta viagem").assertIsDisplayed()
+        composeRule.onNodeWithText("Terminar").performClick()
+        assertEquals(listOf("stop"), actions.calls)
+    }
+
+    @Test
+    fun theSummaryLeavesOutAClimbThatIsNotKnown() {
+        val summary = RideSummary(
+            title = "LisBora", distanceM = 3200.0, movingS = 660.0, elapsedS = 700.0, climbM = null, arrived = false,
+            newPersonalFactor = null, track = emptyList(), plannedRoute = null,
+        )
+        composeRule.setContent { LisboraTheme { RideSummaryPanel(summary, Recorder()) } }
+        composeRule.onNodeWithText("Viagem terminada").assertIsDisplayed()
+        composeRule.onNodeWithText("3,2 km").assertIsDisplayed()
+        composeRule.onNodeWithText("Subida").assertDoesNotExist()
+    }
+
+    @Test
+    fun pedalarOffersAGiraBikeAndStartsTheRide() {
+        val calls = mutableListOf<String>()
+        var setup by mutableStateOf(FreeRideSetup())
+        val actions = object : FreeRideActions {
+            override fun onFreeRideOpen() = Unit
+            override fun onFreeRideClose() { calls += "close" }
+            override fun onFreeRideGira(on: Boolean) {
+                calls += "gira $on"
+                setup = setup.copy(gira = on)
+            }
+            override fun onFreeRideStart() { calls += "start" }
+        }
+        composeRule.setContent { LisboraTheme { FreeRideContent(setup, emptyList(), actions) } }
+        composeRule.onNodeWithText("Pedalar sem rota").assertIsDisplayed()
+        composeRule.onNodeWithText("Bicicleta GIRA").performClick()
+        composeRule.onNodeWithText("Bicicleta GIRA").assertIsOn()
+        composeRule.onNodeWithText("Começar").performClick()
+        assertEquals(listOf("gira true", "start"), calls)
     }
 }

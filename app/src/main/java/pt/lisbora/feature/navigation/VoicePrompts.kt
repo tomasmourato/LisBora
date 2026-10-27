@@ -19,7 +19,8 @@ sealed interface VoicePrompt {
 
     data object OffRoute : VoicePrompt
 
-    data object RerouteFailed : VoicePrompt
+    /** No new route from here; [free]: riding free, where the only route is the way to a GIRA station. */
+    data class RerouteFailed(val free: Boolean = false) : VoicePrompt
 
     /** A GIRA trip's 45 minutes running out ([minutesLeft] 0 when over), and where to swap bikes. */
     data class GiraTime(val warning: GiraWarning, val minutesLeft: Int, val station: NearbyStation?) : VoicePrompt
@@ -61,7 +62,7 @@ class VoicePrompts {
         val out = mutableListOf<VoicePrompt>()
         if (state.rerouting && !rerouting) out += VoicePrompt.OffRoute
         rerouting = state.rerouting
-        if (state.rerouteFailed && !rerouteFailed) out += VoicePrompt.RerouteFailed
+        if (state.rerouteFailed && !rerouteFailed) out += VoicePrompt.RerouteFailed(state.free)
         rerouteFailed = state.rerouteFailed
         if (state.route !== route) {
             route = state.route

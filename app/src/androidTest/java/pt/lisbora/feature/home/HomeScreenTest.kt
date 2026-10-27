@@ -3,18 +3,23 @@ package pt.lisbora.feature.home
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -57,6 +62,7 @@ class HomeScreenTest {
         planner: PlannerUiState = PlannerUiState(),
         onSearchClick: () -> Unit = {},
         onDiscoverClick: () -> Unit = {},
+        onFreeRideClick: () -> Unit = {},
         onLegendToggle: () -> Unit = {},
         onSegmentDismiss: () -> Unit = {},
         onMyLocationClick: () -> Unit = {},
@@ -74,6 +80,7 @@ class HomeScreenTest {
                 planner = planner,
                 plannerActions = object : PlannerActionsAdapter() {
                     override fun onSearchOpen() = onSearchClick()
+                    override fun onFreeRideOpen() = onFreeRideClick()
                 },
             ) {}
         }
@@ -87,6 +94,7 @@ class HomeScreenTest {
                 state = HomeUiState(map = readyMap),
                 onSearchClick = { clicks++ },
                 onDiscoverClick = { clicks++ },
+                onFreeRideClick = { clicks++ },
                 onLegendToggle = { clicks++ },
                 onMyLocationClick = { clicks++ },
             )
@@ -94,9 +102,10 @@ class HomeScreenTest {
 
         composeRule.onNodeWithText("Para onde vais?").assertIsDisplayed().performClick()
         composeRule.onNodeWithContentDescription("Descobrir").assertIsDisplayed().performClick()
+        composeRule.onNodeWithContentDescription("Pedalar").assertIsDisplayed().performClick()
         composeRule.onNodeWithContentDescription("Legenda da rede ciclável").assertIsDisplayed().performClick()
         composeRule.onNodeWithContentDescription("A minha localização").assertIsDisplayed().performClick()
-        assertEquals(4, clicks)
+        assertEquals(5, clicks)
     }
 
     @Test
@@ -164,5 +173,19 @@ class HomeScreenTest {
         composeRule.onNodeWithText("Para onde vais?").assertDoesNotExist()
         // The rider is followed right of the panel (240 dp wide on so narrow a screen, 16 dp from the edge).
         assertEquals(256f, insets!!.follow.calculateLeftPadding(LayoutDirection.Ltr).value, 0.5f)
+    }
+
+    @Test
+    fun onANarrowScreenWithLargeTextDescobrirGoesBelowPedalar() {
+        composeRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.5f)) {
+                Box(Modifier.size(width = 320.dp, height = 640.dp)) { Screen(state = HomeUiState(map = readyMap)) }
+            }
+        }
+        val pedalar = composeRule.onNodeWithContentDescription("Pedalar").assertIsDisplayed().getUnclippedBoundsInRoot()
+        val discover = composeRule.onNodeWithContentDescription("Descobrir").assertIsDisplayed().getUnclippedBoundsInRoot()
+        assertTrue(discover.top >= pedalar.bottom)
+        assertTrue(discover.right <= 320.dp)
     }
 }

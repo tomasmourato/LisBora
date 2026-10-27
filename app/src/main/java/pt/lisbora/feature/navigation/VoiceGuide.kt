@@ -157,7 +157,7 @@ fun VoicePrompt.speech(res: Resources): String = when (this) {
     }
     is VoicePrompt.Ahead -> hazard.aheadText(res, spokenDistance(res, distanceM)) + "."
     VoicePrompt.OffRoute -> res.getString(R.string.voice_off_route)
-    VoicePrompt.RerouteFailed -> res.getString(R.string.nav_reroute_failed)
+    is VoicePrompt.RerouteFailed -> res.getString(if (free) R.string.nav_free_route_failed else R.string.nav_reroute_failed)
     is VoicePrompt.GiraTime -> {
         val time = if (warning == GiraWarning.OVER || minutesLeft <= 0) {
             res.getString(R.string.voice_gira_over)

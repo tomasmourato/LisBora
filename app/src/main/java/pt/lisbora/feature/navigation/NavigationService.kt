@@ -127,16 +127,24 @@ class NavigationService : Service() {
                 add(if (left <= 0) getString(R.string.nav_gira_over) else res.getQuantityString(R.plurals.nav_gira_left, left, left))
             }
             state.next?.street?.takeIf { state.isGuiding() }?.let(::add)
-            val remainingS = state.progress?.remainingS ?: state.route?.durationS ?: 0.0
-            val remainingM = state.progress?.remainingM ?: state.route?.distanceM ?: 0.0
-            val arrival = LocalTime.now().plusSeconds(remainingS.toLong()).format(CLOCK)
-            add(formatDuration(res, remainingS) + " · " + getString(R.string.nav_remaining, formatLength(remainingM), arrival))
+            if (state.route == null) {
+                // Riding free: what has been ridden, with no route to say what is left.
+                add(formatLength(state.riddenM) + " · " + getString(R.string.nav_free_moving, formatRidden(res, state.movingS)))
+            } else {
+                val remainingS = state.progress?.remainingS ?: state.route.durationS
+                val remainingM = state.progress?.remainingM ?: state.route.distanceM
+                val arrival = LocalTime.now().plusSeconds(remainingS.toLong()).format(CLOCK)
+                add(formatDuration(res, remainingS) + " · " + getString(R.string.nav_remaining, formatLength(remainingM), arrival))
+            }
         }
         val next = state.next
+        val trip = g?.trip
         return when {
-            g != null && !g.started -> Content(getString(R.string.nav_gira_walk_to, g.trip.pickUp.label(res), formatLength(g.trip.walkToPickUpM)), lines, null)
+            g != null && !g.started && trip != null ->
+                Content(getString(R.string.nav_gira_walk_to, trip.pickUp.label(res), formatLength(trip.walkToPickUpM)), lines, null)
             state.waitingForGps -> Content(getString(R.string.nav_waiting_gps), lines, null)
             state.rerouting -> Content(getString(R.string.nav_rerouting), lines, null)
+            state.route == null -> Content(getString(R.string.nav_free_notification), lines, null)
             next == null -> Content(getString(R.string.nav_notification_riding), lines, null)
             else -> {
                 val distance = formatLength(roundedDistance(state.distanceToNextM ?: 0.0))

@@ -16,7 +16,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import pt.lisbora.data.saved.SavedKind
+import pt.lisbora.feature.navigation.FreeRideSetup
 import pt.lisbora.routing.RouteResult
+import pt.lisbora.routing.eta.BikeType
 import pt.lisbora.routing.geo.GeoPoint
 import pt.lisbora.routing.search.Place
 import pt.lisbora.routing.search.PlaceCategory
@@ -207,5 +209,31 @@ class PlannerViewModelTest {
         assertTrue(vm.onBack())
         assertEquals(PlannerMode.Browse, vm.uiState.value.mode)
         assertFalse(vm.onBack())
+    }
+
+    @Test
+    fun `Pedalar starts a ride without a route, on the bike chosen last time`() = test { vm ->
+        vm.onFreeRideOpen()
+        assertEquals(FreeRideSetup(gira = false), vm.uiState.value.freeRide)
+        val own = vm.navigationRequest()!!
+        assertTrue(own.free)
+        assertFalse(own.onGira)
+        assertTrue(own.calibrates)
+
+        vm.onFreeRideGiraChange(true)
+        val gira = vm.navigationRequest()!!
+        assertTrue(gira.onGira)
+        assertFalse(gira.calibrates)
+        assertEquals(BikeType.ELECTRIC, gira.preferences.rider.bike)
+        assertTrue(gira.preferences.stayInLisbon)
+
+        // Once riding, the sheet is gone; it opens again with the GIRA bike.
+        vm.onNavigationStarted()
+        assertNull(vm.uiState.value.freeRide)
+        assertNull(vm.navigationRequest())
+        vm.onFreeRideOpen()
+        assertTrue(vm.uiState.value.freeRide!!.gira)
+        assertTrue(vm.onBack())
+        assertNull(vm.uiState.value.freeRide)
     }
 }

@@ -1,8 +1,8 @@
 # LisBora
 
-App Android para andar de bicicleta em Lisboa. Gera rotas que privilegiam a rede ciclável e as ruas calmas, e sugere passeios automáticos para o tempo que tens disponível (lazer, paisagens, rio, desporto, subidas, descidas…). Durante a volta, guia-te passo a passo, também por voz e com o ecrã desligado.
+App Android para andar de bicicleta em Lisboa. Gera rotas que privilegiam a rede ciclável e as ruas calmas, e sugere passeios automáticos para o tempo que tens disponível (lazer, paisagens, rio, desporto, subidas, descidas…). Durante a volta, guia-te passo a passo, também por voz e com o ecrã desligado. Também podes só pedalar, sem rota nem indicações ("Pedalar"), e ver no fim a distância, o tempo, a velocidade média e a subida.
 
-As rotas são calculadas **no telemóvel**: não há servidor nem contas. A Internet é opcional e serve para duas coisas: no Descobrir com GIRA, a app lê as bicicletas e docas livres das estações (dados da EMEL); uma vez por dia, em Wi-Fi, procura dados novos (rede ciclável, ruas, estações GIRA), publicados todas as semanas num release do GitHub. Sem rede, funciona com os dados que tem. O plano completo está em [docs/PLANO.md](docs/PLANO.md).
+As rotas são calculadas **no telemóvel**: não há servidor nem contas. A Internet é opcional e serve para duas coisas: no Descobrir e no Pedalar com GIRA, a app lê as bicicletas e docas livres das estações (dados da EMEL); uma vez por dia, em Wi-Fi, procura dados novos (rede ciclável, ruas, estações GIRA), publicados todas as semanas num release do GitHub. Sem rede, funciona com os dados que tem. O plano completo está em [docs/PLANO.md](docs/PLANO.md).
 
 ## Estado
 

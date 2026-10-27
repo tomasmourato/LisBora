@@ -38,6 +38,10 @@ NAVEGAÇÃO PASSO A PASSO
 • Se te desvias, a rota é recalculada no telemóvel.
 • No fim, um resumo da volta, que podes exportar em GPX. Também podes importar um GPX e segui-lo.
 
+PEDALAR
+• Sem destino nem indicações: carrega em "Pedalar" e vai. No fim, vês a distância, o tempo a pedalar, a velocidade média e a subida, e podes exportar a volta em GPX.
+• Numa bicicleta GIRA, conta os 45 minutos e diz onde trocar de bicicleta antes de acabarem.
+
 MAPA DE LISBOA
 • Rede ciclável da Câmara Municipal de Lisboa, por tipo: ciclovia segregada, faixa ciclável, zonas 30+Bici, percursos ciclopedonais e trilhos.
 • Miradouros, jardins, museus, bebedouros, estacionamento de bicicletas, estações GIRA e oficinas.
@@ -99,7 +103,7 @@ Respostas para a secção "Conteúdo da app" (Política > Conteúdo da app):
   - Descrição:
 
     ```
-    Quando o utilizador carrega em "Iniciar" numa rota, a LisBora guia-o passo a passo (no ecrã, por voz e numa notificação sempre visível). O serviço em primeiro plano do tipo localização mantém a navegação e as indicações por voz com o ecrã desligado ou com outra app à frente, para o ciclista não ter de olhar para o telemóvel. Começa só por ação do utilizador e termina quando ele chega ao destino ou carrega em "Terminar" (na app ou na notificação). A localização é tratada só no telemóvel. A app não pede localização em segundo plano.
+    Quando o utilizador carrega em "Iniciar" numa rota, a LisBora guia-o passo a passo (no ecrã, por voz e numa notificação sempre visível). Quando carrega em "Começar" numa volta sem rota ("Pedalar"), regista a distância e o tempo para o resumo no fim, e numa bicicleta GIRA avisa antes do fim dos 45 minutos. O serviço em primeiro plano do tipo localização mantém a navegação e as indicações por voz com o ecrã desligado ou com outra app à frente, para o ciclista não ter de olhar para o telemóvel. Começa só por ação do utilizador e termina quando ele chega ao destino ou carrega em "Terminar" (na app ou na notificação). A localização é tratada só no telemóvel. A app não pede localização em segundo plano.
     ```
 
   - Vídeo: um endereço do YouTube (pode ser "Não listado") com o vídeo `docs/play/video-servico-primeiro-plano.mp4`.

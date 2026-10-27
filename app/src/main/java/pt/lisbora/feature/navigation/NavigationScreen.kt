@@ -84,20 +84,22 @@ fun KeepScreenOn() {
 /**
  * Top of the map while riding: the next instruction in large type (or what the app is waiting for), the
  * one after it when close, what comes soon (a climb, cobbles…) and, on a GIRA ride, the 45-minute warning.
+ * Riding free there is no instruction, only the GIRA card (and the way to a station to swap bikes).
  */
 @Composable
 fun NavigationTop(state: NavigationUiState, actions: NavigationActions, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val g = state.gira
+        val trip = g?.trip
         when {
-            g != null && !g.started -> {
+            g != null && !g.started && trip != null -> {
                 // Measured from the last fix once there is one; the trip starts within PICK_UP_RADIUS_M.
-                val toStationM = g.toPickUpM ?: g.trip.walkToPickUpM
+                val toStationM = g.toPickUpM ?: trip.walkToPickUpM
                 StatusCard(
                     if (toStationM <= NavigationSession.PICK_UP_RADIUS_M) {
-                        stringResource(R.string.nav_gira_pick_up, g.trip.pickUp.label())
+                        stringResource(R.string.nav_gira_pick_up, trip.pickUp.label())
                     } else {
-                        stringResource(R.string.nav_gira_walk_to, g.trip.pickUp.label(), formatLength(toStationM))
+                        stringResource(R.string.nav_gira_walk_to, trip.pickUp.label(), formatLength(toStationM))
                     },
                     progress = state.waitingForGps,
                 )
@@ -106,7 +108,7 @@ fun NavigationTop(state: NavigationUiState, actions: NavigationActions, modifier
             state.rerouting -> StatusCard(stringResource(R.string.nav_rerouting), progress = true)
             else -> state.next?.let { ManeuverCard(it, state.distanceToNextM ?: 0.0, state.then) }
         }
-        if (state.rerouteFailed) StatusCard(stringResource(R.string.nav_reroute_failed))
+        if (state.rerouteFailed) StatusCard(stringResource(if (state.free) R.string.nav_free_route_failed else R.string.nav_reroute_failed))
         if (state.upcoming != null && state.distanceToUpcomingM != null && !state.rerouting) {
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.tertiaryContainer, shadowElevation = 2.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
@@ -302,19 +304,29 @@ fun NavigationButtons(state: NavigationUiState, actions: NavigationActions, modi
     }
 }
 
-/** Time and distance left with the arrival time, the GIRA trip's time, and "Terminar". */
+/**
+ * Time and distance left with the arrival time (riding free: the distance and time ridden, and the
+ * average speed), the GIRA trip's time, and "Terminar".
+ */
 @Composable
 private fun TripInfo(state: NavigationUiState, actions: NavigationActions, modifier: Modifier = Modifier) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Column(Modifier.weight(1f)) {
-            val progress = state.progress
-            val remainingS = progress?.remainingS ?: state.route?.durationS ?: 0.0
-            val remainingM = progress?.remainingM ?: state.route?.distanceM ?: 0.0
-            Text(formatDuration(remainingS), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-            Text(
-                stringResource(R.string.nav_remaining, formatLength(remainingM), LocalTime.now().plusSeconds(remainingS.toLong()).format(CLOCK)),
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            val route = state.route
+            if (route == null) {
+                val kmh = if (state.movingS > 0) (state.riddenM / state.movingS * 3.6).roundToInt() else 0
+                Text(formatLength(state.riddenM), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.nav_free_stats, formatRidden(state.movingS), kmh), style = MaterialTheme.typography.bodyMedium)
+            } else {
+                val progress = state.progress
+                val remainingS = progress?.remainingS ?: route.durationS
+                val remainingM = progress?.remainingM ?: route.distanceM
+                Text(formatDuration(remainingS), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                Text(
+                    stringResource(R.string.nav_remaining, formatLength(remainingM), LocalTime.now().plusSeconds(remainingS.toLong()).format(CLOCK)),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
             state.gira?.let { g ->
                 Text(
                     if (g.started) {
@@ -356,7 +368,7 @@ fun RideSummaryPanel(summary: RideSummary, actions: NavigationActions, modifier:
             SummaryLine(stringResource(R.string.nav_summary_distance), formatLength(summary.distanceM))
             SummaryLine(stringResource(R.string.nav_summary_moving), formatDuration(summary.movingS))
             SummaryLine(stringResource(R.string.nav_summary_speed), stringResource(R.string.nav_summary_kmh, summary.averageKmh.roundToInt()))
-            SummaryLine(stringResource(R.string.nav_summary_climb), formatMetres(summary.climbM))
+            summary.climbM?.let { SummaryLine(stringResource(R.string.nav_summary_climb), formatMetres(it)) }
             summary.newPersonalFactor?.let { factor ->
                 val percent = abs(((factor - 1) * 100).roundToInt())
                 Text(
